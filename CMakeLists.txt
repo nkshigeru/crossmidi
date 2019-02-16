@@ -16,6 +16,10 @@ message(STATUS ${wxWidgets_DEFINITIONS_DEBUG})
 add_executable(MIDI-moni WIN32
   App.h
   App.cpp
+  MainFrame.h
+  MainFrame.cpp
+  InputDevicePanel.h
+  InputDevicePanel.cpp
 )
 target_include_directories(MIDI-moni
   PRIVATE ${wxWidgets_INCLUDE_DIRS}

@@ -2,9 +2,16 @@
 
 wxIMPLEMENT_APP(App);
 
+App::App()
+{
+#ifdef _WIN32
+	SetProcessDPIAware();
+#endif // _WIN32
+}
+
 bool App::OnInit()
 {
-    wxFrame* frame = new wxFrame(NULL, wxID_ANY, wxT("MIDI moni"), wxDefaultPosition, wxSize(500, 500));
-    frame->Show(true);
+    main_frame = new MainFrame();
+    main_frame->Show(true);
     return true;
 }
