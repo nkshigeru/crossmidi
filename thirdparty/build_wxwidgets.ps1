@@ -9,6 +9,10 @@ $target_dir = Join-Path $PSScriptRoot $platform
     -G"$generator" `
     -DCMAKE_GENERATOR_PLATFORM="$platform" `
     -DCMAKE_INSTALL_PREFIX="$target_dir" `
+    -DCMAKE_C_FLAGS_DEBUG="/MTd" `
+    -DCMAKE_CXX_FLAGS_DEBUG="/MTd" `
+    -DCMAKE_C_FLAGS_RELEASE="/MT" `
+    -DCMAKE_CXX_FLAGS_RELEASE="/MT" `
     -DwxBUILD_SHARED=OFF `
     
 & cmake --build "$build_dir" --target INSTALL --config Debug
