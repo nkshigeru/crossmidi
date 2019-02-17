@@ -1,12 +1,14 @@
 #include <list>
 #include <gtest/gtest.h>
+#include <RtMidi.h>
 #include <wx/wx.h>
 #include "MainFrame.h"
 
 int ARGC;
-char** ARGV;
+wchar_t** ARGV;
 
-int main(int argc, char *argv[])
+//int main(int argc, char *argv[])
+int wmain(int argc, wchar_t *argv[], wchar_t *envp[])
 {
 #ifdef _WIN32
 	SetProcessDPIAware();

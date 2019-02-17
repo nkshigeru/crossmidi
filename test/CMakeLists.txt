@@ -5,3 +5,8 @@ target_link_libraries(test_midi_moni
   midimonilib
   GTest::GTest
 )
+
+add_test(
+  NAME test_midi_moni
+  COMMAND $<TARGET_FILE:test_midi_moni>
+)
