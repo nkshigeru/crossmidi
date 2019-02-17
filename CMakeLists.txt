@@ -27,10 +27,12 @@ include_directories(
 )
 
 add_library(midimonilib STATIC
-  MainFrame.h
-  MainFrame.cpp
+  InputDeviceLogFrame.h
+  InputDeviceLogFrame.cpp
   InputDevicePanel.h
   InputDevicePanel.cpp
+  MainFrame.h
+  MainFrame.cpp
 )
 target_include_directories(midimonilib
   PUBLIC ${wxWidgets_INCLUDE_DIRS}

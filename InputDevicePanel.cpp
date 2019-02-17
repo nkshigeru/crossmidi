@@ -1,10 +1,20 @@
 #include "InputDevicePanel.h"
+#include "InputDeviceLogFrame.h"
 
 std::unique_ptr<RtMidiIn> _CreateMidiIn()
 {
 	return std::unique_ptr<RtMidiIn>(new RtMidiIn());
 }
 std::function<std::unique_ptr<RtMidiIn>()> CreateMidiIn = _CreateMidiIn;
+
+enum {
+	ID_ = wxID_HIGHEST,
+	ID_INPUT_DEVICE_LIST,
+};
+
+wxBEGIN_EVENT_TABLE(InputDevicePanel, wxPanel)
+	EVT_LISTBOX_DCLICK(ID_INPUT_DEVICE_LIST, InputDevicePanel::OnDeviceListDClick)
+wxEND_EVENT_TABLE()
 
 InputDevicePanel::InputDevicePanel(wxWindow *parent,
         wxWindowID winid,
@@ -13,7 +23,7 @@ InputDevicePanel::InputDevicePanel(wxWindow *parent,
         long style,
         const wxString& name) : wxPanel(parent, winid, pos, size, style, name)
 {
-    device_list_ctrl = new wxListBox(this, wxID_ANY);
+    device_list_ctrl = new wxListBox(this, ID_INPUT_DEVICE_LIST);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(new wxStaticText(this, wxID_ANY, _T("Input Devices:")), wxSizerFlags(0).Expand());
@@ -45,4 +55,14 @@ void InputDevicePanel::Load()
 		}
 	}
 	device_list_ctrl->Set(list);
+}
+
+void InputDevicePanel::OnDeviceListDClick(wxCommandEvent& evt)
+{
+	int n = evt.GetSelection();
+	if (0 <= n && n < m_midi_in->getPortCount())
+	{
+		InputDeviceLogFrame* new_frame = new InputDeviceLogFrame(n);
+		new_frame->Show();
+	}
 }

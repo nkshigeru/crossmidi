@@ -21,5 +21,10 @@ public:
     wxListBox* device_list_ctrl;
 
 private:
+
+	void OnDeviceListDClick(wxCommandEvent&);
+
 	std::unique_ptr<RtMidiIn> m_midi_in;
+
+	wxDECLARE_EVENT_TABLE();
 };
