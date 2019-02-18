@@ -16,6 +16,12 @@ std::string midi2str(const unsigned char* data, size_t len)
 				unsigned int number;
 				unsigned int value;
 			} cc;
+			struct {
+				unsigned int hh;
+				unsigned int mm;
+				unsigned int ss;
+				unsigned int ff;
+			} time_code;
 		};
 	} midi_message;
 	if (len == 1)
@@ -34,6 +40,41 @@ std::string midi2str(const unsigned char* data, size_t len)
 		case 0xFC:
 			os << "Stop";
 			break;
+		}
+	}
+	else if (len == 2)
+	{
+		//Quarter frame message
+		if (data[0] == 0xF1)
+		{
+			unsigned int v = data[1] & 0x0F;
+			switch (data[1] & 0xF0)
+			{
+			case 0x00:
+				os << "Frame LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
+				break;
+			case 0x10:
+				os << "Frame MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
+				break;
+			case 0x20:
+				os << "Second LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
+				break;
+			case 0x30:
+				os << "Second MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
+				break;
+			case 0x40:
+				os << "Minute LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
+				break;
+			case 0x50:
+				os << "Minute MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
+				break;
+			case 0x60:
+				os << "Hour LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
+				break;
+			case 0x70:
+				os << "Hour MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
+				break;
+			}
 		}
 	}
 	else if (len == 3)
@@ -64,6 +105,24 @@ std::string midi2str(const unsigned char* data, size_t len)
 				<< " number:" << midi_message.cc.number
 				<< " value:" << midi_message.cc.value;
 			break;
+		}
+	}
+	else if (len == 10)
+	{
+		//Full time code (F0 7F 7F 01 01 hh mm ss ff F7)
+		if (data[0] == 0xF0 && data[1] == 0x7F && data[2] == 0x7F
+			&& data[3] == 0x01 && data[4] == 0x01 && data[9] == 0xF7)
+		{
+			midi_message.time_code.hh = data[5];
+			midi_message.time_code.mm = data[6];
+			midi_message.time_code.ss = data[7];
+			midi_message.time_code.ff = data[8];
+			os << "Time Code"
+				<< std::setw(2) << std::setfill('0')
+				<< midi_message.time_code.hh << ':'
+				<< midi_message.time_code.mm << ':'
+				<< midi_message.time_code.ss << '.'
+				<< midi_message.time_code.ff;
 		}
 	}
 	return os.str();
