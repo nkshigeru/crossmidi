@@ -3,23 +3,33 @@
 InputDeviceLogFrame::InputDeviceLogFrame(unsigned int port)
 {
     Create(NULL, wxID_ANY, wxString::Format(wxT("MIDI moni #%d"), port), wxDefaultPosition, FromDIP(wxSize(500, 500)), wxDEFAULT_FRAME_STYLE);
-	log_area = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	log_area = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_RICH);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(log_area, wxSizerFlags(1).Expand());
 	SetSizer(sizer);
 
+	m_textattr_error = wxTextAttr(*wxRED);
+
 	m_midi_in = std::unique_ptr<RtMidiIn>(new RtMidiIn());
 	if (port < m_midi_in->getPortCount())
 	{
-		wxString name = wxString::FromUTF8(m_midi_in->getPortName(port));
-		SetTitle(wxString::Format(wxT("MIDI moni #%d %s"), port, name.c_str()));
-		log_area->AppendText(name + wxT("\n"));
+		try
+		{
+			wxString name = wxString::FromUTF8(m_midi_in->getPortName(port));
+			SetTitle(wxString::Format(wxT("MIDI moni #%d %s"), port, name.c_str()));
+			log_area->AppendText(name + wxT("\n"));
 
-		m_midi_in->setCallback(&InputDeviceLogFrame::_RtMidiCallback, this);
-		m_midi_in->openPort(port);
-		m_midi_in->ignoreTypes(false, false, false);
-		log_area->AppendText(wxT("OK\n"));
+			m_midi_in->setCallback(&InputDeviceLogFrame::_RtMidiCallback, this);
+			m_midi_in->openPort(port);
+			m_midi_in->ignoreTypes(false, false, false);
+			log_area->AppendText(wxT("OK\n"));
+		}
+		catch (RtMidiError& e)
+		{
+			log_area->SetDefaultStyle(m_textattr_error);
+			log_area->AppendText(e.getMessage());
+		}
 	}
 }
 

@@ -16,4 +16,5 @@ private:
 	void RtMidiCallback(double timeStamp, std::vector<unsigned char> *message);
 
 	std::unique_ptr<RtMidiIn> m_midi_in;
+	wxTextAttr m_textattr_error;
 };
