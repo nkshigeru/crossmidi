@@ -2,6 +2,7 @@
 
 #include <RtMidi.h>
 #include <wx/wx.h>
+#include "crossmidi/MidiMessage.hpp"
 
 class InputDeviceLogFrame : public wxFrame
 {
@@ -16,6 +17,7 @@ private:
 	void RtMidiCallback(double timeStamp, std::vector<unsigned char> *message);
 
 	std::unique_ptr<RtMidiIn> m_midi_in;
+	crossmidi::MidiTimeCode m_mtc;
 	wxTextAttr m_textattr_error;
 	wxTextAttr m_textattr_raw;
 	wxTextAttr m_textattr_info;

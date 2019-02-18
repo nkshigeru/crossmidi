@@ -3,7 +3,31 @@
 #include <sstream>
 #include "crossmidi/MidiMessage.hpp"
 
-std::string midi2str(const unsigned char* data, size_t len)
+static inline std::ostream& operator <<(std::ostream& os, const crossmidi::MidiTimeCode& mtc)
+{
+	os << std::setfill('0') << std::dec
+		<< std::setw(2) << (int)mtc.hour << ':'
+		<< std::setw(2) << (int)mtc.minute << ':'
+		<< std::setw(2) << (int)mtc.second << '.'
+		<< std::setw(2) << (int)mtc.frame;
+	switch (mtc.rate) {
+	case crossmidi::MidiTimeCode::FRAMERATE_24:
+		os << " (24 frames/s)";
+		break;
+	case crossmidi::MidiTimeCode::FRAMERATE_25:
+		os << " (25 frames/s)";
+		break;
+	case crossmidi::MidiTimeCode::FRAMERATE_29_97:
+		os << " (29.97 frames/s)";
+		break;
+	case crossmidi::MidiTimeCode::FRAMERATE_30:
+		os << " (30 frames/s)";
+		break;
+	}
+	return os;
+}
+
+std::string midi2str(const unsigned char* data, size_t len, crossmidi::MidiTimeCode& mtc)
 {
 	std::ostringstream os;
 	crossmidi::MidiMessage m = crossmidi::MidiMessage::FromBytes(data, len);
@@ -22,27 +46,43 @@ std::string midi2str(const unsigned char* data, size_t len)
 		os << "Stop";
 		break;
 	case crossmidi::MidiMessage::MTC_FRAME_LSB:
-		os << "Frame LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame;
+		mtc.frame = (mtc.frame & 0xF0) | (m.time_code.frame & 0x0F);
+		os << "Frame LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame
+			<< " TimeCode: " << mtc;
 		break;
 	case crossmidi::MidiMessage::MTC_FRAME_MSB:
-		os << "Frame MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame;
+		mtc.frame = (m.time_code.frame & 0xF0) | (mtc.frame & 0x0F);
+		os << "Frame MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame
+			<< " TimeCode: " << mtc;
 		break;
 	case crossmidi::MidiMessage::MTC_SECOND_LSB:
-		os << "Second LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
+		mtc.second = (mtc.second & 0xF0) | (m.time_code.second & 0x0F);
+		os << "Second LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second
+			<< " TimeCode: " << mtc;
 		break;
 	case crossmidi::MidiMessage::MTC_SECOND_MSB:
-		os << "Second MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
-		break;
-	case crossmidi::MidiMessage::MTC_MINUTE_MSB:
-		os << "Minute LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
+		mtc.second = (m.time_code.second & 0xF0) | (mtc.second & 0x0F);
+		os << "Second MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second
+			<< " TimeCode: " << mtc;
 		break;
 	case crossmidi::MidiMessage::MTC_MINUTE_LSB:
-		os << "Minute MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.minute;
+		mtc.minute = (mtc.minute & 0xF0) | (m.time_code.minute & 0x0F);
+		os << "Minute LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second
+			<< " TimeCode: " << mtc;
+		break;
+	case crossmidi::MidiMessage::MTC_MINUTE_MSB:
+		mtc.minute = (m.time_code.minute & 0xF0) | (mtc.minute & 0x0F);
+		os << "Minute MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.minute
+			<< " TimeCode: " << mtc;
 		break;
 	case crossmidi::MidiMessage::MTC_HOUR_LSB:
-		os << "Hour LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.hour;
+		mtc.hour = (mtc.hour & 0xF0) | (m.time_code.hour & 0x0F);
+		os << "Hour LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.hour
+			<< " TimeCode: " << mtc;
 		break;
 	case crossmidi::MidiMessage::MTC_RATE_HOUR_MSB:
+		mtc.rate = m.time_code.rate;
+		mtc.hour = (m.time_code.hour & 0xF0) | (mtc.hour & 0x0F);
 		os << "Hour MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.hour;
 		switch (m.time_code.rate) {
 		case crossmidi::MidiTimeCode::FRAMERATE_24:
@@ -58,6 +98,7 @@ std::string midi2str(const unsigned char* data, size_t len)
 			os << " FrameRate: 30";
 			break;
 		}
+		os << " TimeCode: " << mtc;
 		break;
 	case crossmidi::MidiMessage::NOTE_OFF:
 		os << "NoteOff ch:" << (int)m.note.ch + 1
@@ -75,25 +116,8 @@ std::string midi2str(const unsigned char* data, size_t len)
 			<< " value:" << (int)m.cc.value;
 		break;
 	case crossmidi::MidiMessage::MTC:
-		os << "Time Code "
-			<< std::setw(2) << std::setfill('0') << (int)m.time_code.hour << ':'
-			<< std::setw(2) << std::setfill('0') << (int)m.time_code.minute << ':'
-			<< std::setw(2) << std::setfill('0') << (int)m.time_code.second << '.'
-			<< std::setw(2) << std::setfill('0') << (int)m.time_code.frame;
-		switch (m.time_code.rate) {
-		case crossmidi::MidiTimeCode::FRAMERATE_24:
-			os << " (24 frames/s)";
-			break;
-		case crossmidi::MidiTimeCode::FRAMERATE_25:
-			os << " (25 frames/s)";
-			break;
-		case crossmidi::MidiTimeCode::FRAMERATE_29_97:
-			os << " (29.97 frames/s)";
-			break;
-		case crossmidi::MidiTimeCode::FRAMERATE_30:
-			os << " (30 frames/s)";
-			break;
-		}
+		mtc = m.time_code;
+		os << "Time Code " << m.time_code;
 		break;
 	}
 	return os.str();
@@ -114,6 +138,7 @@ InputDeviceLogFrame::InputDeviceLogFrame(unsigned int port)
 	m_textattr_raw = wxTextAttr(*wxWHITE, wxColour(60, 60, 60), raw_font);
 	m_textattr_info = wxTextAttr(wxColour(20, 200, 20), *wxWHITE, default_font);
 
+	m_mtc.clear();
 	m_midi_in = std::unique_ptr<RtMidiIn>(new RtMidiIn());
 	if (port < m_midi_in->getPortCount())
 	{
@@ -182,7 +207,8 @@ void InputDeviceLogFrame::RtMidiCallback(double timeStamp, std::vector<unsigned 
 			log_area->AppendText(os.str());
 			log_area->SetDefaultStyle(m_textattr_info);
 			log_area->AppendText(wxT(" "));
-			log_area->AppendText(midi2str(&data.message[0], data.message.size()));
+			std::string info = midi2str(&data.message[0], data.message.size(), m_mtc);
+			log_area->AppendText(info);
 			log_area->AppendText(wxT("\n"));
 		}
 	});
