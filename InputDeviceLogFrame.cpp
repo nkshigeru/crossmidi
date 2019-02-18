@@ -1,129 +1,100 @@
 #include "InputDeviceLogFrame.h"
 #include <iomanip>
 #include <sstream>
+#include "crossmidi/MidiMessage.hpp"
 
 std::string midi2str(const unsigned char* data, size_t len)
 {
 	std::ostringstream os;
-	struct MidiMessage {
-		unsigned int ch;
-		union {
-			struct {
-				unsigned int note;
-				unsigned int velocity;
-			} note;
-			struct {
-				unsigned int number;
-				unsigned int value;
-			} cc;
-			struct {
-				unsigned int hh;
-				unsigned int mm;
-				unsigned int ss;
-				unsigned int ff;
-			} time_code;
-		};
-	} midi_message;
-	if (len == 1)
+	crossmidi::MidiMessage m = crossmidi::MidiMessage::FromBytes(data, len);
+	switch (m.type)
 	{
-		switch (data[0])
-		{
-		case 0xF8:
-			os << "Clock";
+	case crossmidi::MidiMessage::CLOCK:
+		os << "Clock";
+		break;
+	case crossmidi::MidiMessage::CLOCK_START:
+		os << "Start";
+		break;
+	case crossmidi::MidiMessage::CLOCK_CONTINUE:
+		os << "Continue";
+		break;
+	case crossmidi::MidiMessage::CLOCK_STOP:
+		os << "Stop";
+		break;
+	case crossmidi::MidiMessage::MTC_FRAME_LSB:
+		os << "Frame LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame;
+		break;
+	case crossmidi::MidiMessage::MTC_FRAME_MSB:
+		os << "Frame MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame;
+		break;
+	case crossmidi::MidiMessage::MTC_SECOND_LSB:
+		os << "Second LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
+		break;
+	case crossmidi::MidiMessage::MTC_SECOND_MSB:
+		os << "Second MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
+		break;
+	case crossmidi::MidiMessage::MTC_MINUTE_MSB:
+		os << "Minute LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
+		break;
+	case crossmidi::MidiMessage::MTC_MINUTE_LSB:
+		os << "Minute MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.minute;
+		break;
+	case crossmidi::MidiMessage::MTC_HOUR_LSB:
+		os << "Hour LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.hour;
+		break;
+	case crossmidi::MidiMessage::MTC_RATE_HOUR_MSB:
+		os << "Hour MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.hour;
+		switch (m.time_code.rate) {
+		case crossmidi::MidiTimeCode::FRAMERATE_24:
+			os << " FrameRate: 24";
 			break;
-		case 0xFA:
-			os << "Start";
+		case crossmidi::MidiTimeCode::FRAMERATE_25:
+			os << " FrameRate: 25";
 			break;
-		case 0xFB:
-			os << "Continue";
+		case crossmidi::MidiTimeCode::FRAMERATE_29_97:
+			os << " FrameRate: 29.97";
 			break;
-		case 0xFC:
-			os << "Stop";
+		case crossmidi::MidiTimeCode::FRAMERATE_30:
+			os << " FrameRate: 30";
 			break;
 		}
-	}
-	else if (len == 2)
-	{
-		//Quarter frame message
-		if (data[0] == 0xF1)
-		{
-			unsigned int v = data[1] & 0x0F;
-			switch (data[1] & 0xF0)
-			{
-			case 0x00:
-				os << "Frame LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
-				break;
-			case 0x10:
-				os << "Frame MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
-				break;
-			case 0x20:
-				os << "Second LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
-				break;
-			case 0x30:
-				os << "Second MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
-				break;
-			case 0x40:
-				os << "Minute LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
-				break;
-			case 0x50:
-				os << "Minute MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
-				break;
-			case 0x60:
-				os << "Hour LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << v;
-				break;
-			case 0x70:
-				os << "Hour MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (v << 4);
-				break;
-			}
-		}
-	}
-	else if (len == 3)
-	{
-		switch (data[0] & 0xF0)
-		{
-		case 0x80://NoteOff
-			midi_message.ch = data[0] & 0xF;
-			midi_message.note.note = data[1];
-			midi_message.note.velocity = data[2];
-			os << "NoteOff ch:" << midi_message.ch + 1
-				<< " note:" << midi_message.note.note
-				<< " velocity:" << midi_message.note.velocity;
+		break;
+	case crossmidi::MidiMessage::NOTE_OFF:
+		os << "NoteOff ch:" << (int)m.note.ch + 1
+			<< " note:" << (int)m.note.note
+			<< " velocity:" << (int)m.note.velocity;
+		break;
+	case crossmidi::MidiMessage::NOTE_ON:
+		os << "NoteOn  ch:" << (int)m.note.ch + 1
+			<< " note:" << (int)m.note.note
+			<< " velocity:" << (int)m.note.velocity;
+		break;
+	case crossmidi::MidiMessage::CC:
+		os << "ControlChange ch:" << (int)m.cc.ch + 1
+			<< " number:" << (int)m.cc.number
+			<< " value:" << (int)m.cc.value;
+		break;
+	case crossmidi::MidiMessage::MTC:
+		os << "Time Code "
+			<< std::setw(2) << std::setfill('0') << (int)m.time_code.hour << ':'
+			<< std::setw(2) << std::setfill('0') << (int)m.time_code.minute << ':'
+			<< std::setw(2) << std::setfill('0') << (int)m.time_code.second << '.'
+			<< std::setw(2) << std::setfill('0') << (int)m.time_code.frame;
+		switch (m.time_code.rate) {
+		case crossmidi::MidiTimeCode::FRAMERATE_24:
+			os << " (24 frames/s)";
 			break;
-		case 0x90://NoteOn
-			midi_message.ch = data[0] & 0xF;
-			midi_message.note.note = data[1];
-			midi_message.note.velocity = data[2];
-			os << "NoteOn  ch:" << midi_message.ch + 1
-				<< " note:" << midi_message.note.note
-				<< " velocity:" << midi_message.note.velocity;
+		case crossmidi::MidiTimeCode::FRAMERATE_25:
+			os << " (25 frames/s)";
 			break;
-		case 0xB0://CC
-			midi_message.ch = data[0] & 0xF;
-			midi_message.cc.number = data[1];
-			midi_message.cc.value = data[2];
-			os << "ControlChange ch:" << midi_message.ch + 1
-				<< " number:" << midi_message.cc.number
-				<< " value:" << midi_message.cc.value;
+		case crossmidi::MidiTimeCode::FRAMERATE_29_97:
+			os << " (29.97 frames/s)";
+			break;
+		case crossmidi::MidiTimeCode::FRAMERATE_30:
+			os << " (30 frames/s)";
 			break;
 		}
-	}
-	else if (len == 10)
-	{
-		//Full time code (F0 7F 7F 01 01 hh mm ss ff F7)
-		if (data[0] == 0xF0 && data[1] == 0x7F && data[2] == 0x7F
-			&& data[3] == 0x01 && data[4] == 0x01 && data[9] == 0xF7)
-		{
-			midi_message.time_code.hh = data[5];
-			midi_message.time_code.mm = data[6];
-			midi_message.time_code.ss = data[7];
-			midi_message.time_code.ff = data[8];
-			os << "Time Code"
-				<< std::setw(2) << std::setfill('0')
-				<< midi_message.time_code.hh << ':'
-				<< midi_message.time_code.mm << ':'
-				<< midi_message.time_code.ss << '.'
-				<< midi_message.time_code.ff;
-		}
+		break;
 	}
 	return os.str();
 }

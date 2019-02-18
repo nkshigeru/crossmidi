@@ -24,6 +24,7 @@ target_include_directories(rtmidi
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 add_library(midimonilib STATIC
