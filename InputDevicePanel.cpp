@@ -25,9 +25,17 @@ InputDevicePanel::InputDevicePanel(wxWindow *parent,
 {
     device_list_ctrl = new wxListBox(this, ID_INPUT_DEVICE_LIST);
 
-	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-	sizer->Add(new wxStaticText(this, wxID_ANY, _T("Input Devices:")), wxSizerFlags(0).Expand());
-	sizer->Add(device_list_ctrl, wxSizerFlags(1).Expand());
+	wxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+	sizer->AddSpacer(FromDIP(10));
+	{
+		wxSizer* s1 = new wxBoxSizer(wxVERTICAL);
+		s1->AddSpacer(FromDIP(10));
+		s1->Add(new wxStaticText(this, wxID_ANY, _T("Input Devices:")), wxSizerFlags(0).Expand());
+		s1->Add(device_list_ctrl, wxSizerFlags(1).Expand());
+		s1->AddSpacer(FromDIP(10));
+		sizer->Add(s1, wxSizerFlags(1).Expand());
+	}
+	sizer->AddSpacer(FromDIP(10));
 	SetSizer(sizer);
 
 	m_midi_in = CreateMidiIn();

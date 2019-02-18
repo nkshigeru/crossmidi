@@ -2,7 +2,7 @@
 
 MainFrame::MainFrame()
 {
-    Create(NULL, wxID_ANY, wxT("MIDI moni"), wxDefaultPosition, FromDIP(wxSize(500, 500)), wxDEFAULT_FRAME_STYLE);
+    Create(NULL, wxID_ANY, wxT("MIDI moni"), wxDefaultPosition, FromDIP(wxSize(400, 200)), wxDEFAULT_FRAME_STYLE);
 	input_device_panel = new InputDevicePanel(this, wxID_ANY);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);

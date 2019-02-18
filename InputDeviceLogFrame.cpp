@@ -2,7 +2,7 @@
 
 InputDeviceLogFrame::InputDeviceLogFrame(unsigned int port)
 {
-    Create(NULL, wxID_ANY, wxT("MIDI moni"), wxDefaultPosition, FromDIP(wxSize(500, 500)), wxDEFAULT_FRAME_STYLE);
+    Create(NULL, wxID_ANY, wxString::Format(wxT("MIDI moni #%d"), port), wxDefaultPosition, FromDIP(wxSize(500, 500)), wxDEFAULT_FRAME_STYLE);
 	log_area = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
@@ -12,8 +12,9 @@ InputDeviceLogFrame::InputDeviceLogFrame(unsigned int port)
 	m_midi_in = std::unique_ptr<RtMidiIn>(new RtMidiIn());
 	if (port < m_midi_in->getPortCount())
 	{
-		std::string name = m_midi_in->getPortName(port);
-		log_area->AppendText(wxString::FromUTF8(name) + wxT("\n"));
+		wxString name = wxString::FromUTF8(m_midi_in->getPortName(port));
+		SetTitle(wxString::Format(wxT("MIDI moni #%d %s"), port, name.c_str()));
+		log_area->AppendText(name + wxT("\n"));
 
 		m_midi_in->setCallback(&InputDeviceLogFrame::_RtMidiCallback, this);
 		m_midi_in->openPort(port);
