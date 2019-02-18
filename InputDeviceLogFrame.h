@@ -17,4 +17,6 @@ private:
 
 	std::unique_ptr<RtMidiIn> m_midi_in;
 	wxTextAttr m_textattr_error;
+	wxTextAttr m_textattr_raw;
+	wxTextAttr m_textattr_info;
 };

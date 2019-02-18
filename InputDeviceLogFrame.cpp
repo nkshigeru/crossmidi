@@ -1,4 +1,73 @@
 #include "InputDeviceLogFrame.h"
+#include <iomanip>
+#include <sstream>
+
+std::string midi2str(const unsigned char* data, size_t len)
+{
+	std::ostringstream os;
+	struct MidiMessage {
+		unsigned int ch;
+		union {
+			struct {
+				unsigned int note;
+				unsigned int velocity;
+			} note;
+			struct {
+				unsigned int number;
+				unsigned int value;
+			} cc;
+		};
+	} midi_message;
+	if (len == 1)
+	{
+		switch (data[0])
+		{
+		case 0xF8:
+			os << "Clock";
+			break;
+		case 0xFA:
+			os << "Start";
+			break;
+		case 0xFB:
+			os << "Continue";
+			break;
+		case 0xFC:
+			os << "Stop";
+			break;
+		}
+	}
+	else if (len == 3)
+	{
+		switch (data[0] & 0xF0)
+		{
+		case 0x80://NoteOff
+			midi_message.ch = data[0] & 0xF;
+			midi_message.note.note = data[1];
+			midi_message.note.velocity = data[2];
+			os << "NoteOff ch:" << midi_message.ch + 1
+				<< " note:" << midi_message.note.note
+				<< " velocity:" << midi_message.note.velocity;
+			break;
+		case 0x90://NoteOn
+			midi_message.ch = data[0] & 0xF;
+			midi_message.note.note = data[1];
+			midi_message.note.velocity = data[2];
+			os << "NoteOn  ch:" << midi_message.ch + 1
+				<< " note:" << midi_message.note.note
+				<< " velocity:" << midi_message.note.velocity;
+			break;
+		case 0xB0://CC
+			midi_message.ch = data[0] & 0xF;
+			midi_message.cc.number = data[1];
+			midi_message.cc.value = data[2];
+			os << "ControlChange ch:" << midi_message.ch + 1
+				<< " number:" << midi_message.cc.number
+				<< " value:" << midi_message.cc.value;
+			break;
+		}
+	}
+	return os.str();
+}
 
 InputDeviceLogFrame::InputDeviceLogFrame(unsigned int port)
 {
@@ -9,7 +78,11 @@ InputDeviceLogFrame::InputDeviceLogFrame(unsigned int port)
 	sizer->Add(log_area, wxSizerFlags(1).Expand());
 	SetSizer(sizer);
 
-	m_textattr_error = wxTextAttr(*wxRED);
+	wxFont default_font = log_area->GetFont();
+	m_textattr_error = wxTextAttr(*wxRED, *wxWHITE, default_font);
+	wxFont raw_font = wxFont(10, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxT("Consolas"));
+	m_textattr_raw = wxTextAttr(*wxWHITE, wxColour(60, 60, 60), raw_font);
+	m_textattr_info = wxTextAttr(wxColour(20, 200, 20), *wxWHITE, default_font);
 
 	m_midi_in = std::unique_ptr<RtMidiIn>(new RtMidiIn());
 	if (port < m_midi_in->getPortCount())
@@ -64,10 +137,23 @@ void InputDeviceLogFrame::RtMidiCallback(double timeStamp, std::vector<unsigned 
 		}
 	}
 	CallAfter([this, data]() {
-		for (size_t i = 0; i < data.message.size(); ++i)
+		if (!data.message.empty())
 		{
-			log_area->AppendText(wxString::Format(wxT("%02x "), (int)data.message[i]));
+			log_area->SetDefaultStyle(m_textattr_raw);
+			std::ostringstream os;
+			for (size_t i = 0; i < data.message.size(); ++i)
+			{
+				if (i != 0)
+				{
+					os << " ";
+				}
+				os << std::setw(2) << std::setfill('0') << std::hex << (int)data.message[i];
+			}
+			log_area->AppendText(os.str());
+			log_area->SetDefaultStyle(m_textattr_info);
+			log_area->AppendText(wxT(" "));
+			log_area->AppendText(midi2str(&data.message[0], data.message.size()));
+			log_area->AppendText(wxT("\n"));
 		}
-		log_area->AppendText(wxT("\n"));
 	});
 }
