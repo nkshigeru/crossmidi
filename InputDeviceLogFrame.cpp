@@ -123,10 +123,14 @@ std::string midi2str(const unsigned char* data, size_t len, crossmidi::MidiTimeC
 	return os.str();
 }
 
+wxBEGIN_EVENT_TABLE(InputDeviceLogFrame, wxFrame)
+	EVT_IDLE(InputDeviceLogFrame::OnIdle)
+wxEND_EVENT_TABLE()
+
 InputDeviceLogFrame::InputDeviceLogFrame(unsigned int port)
 {
     Create(NULL, wxID_ANY, wxString::Format(wxT("MIDI moni #%d"), port), wxDefaultPosition, FromDIP(wxSize(500, 500)), wxDEFAULT_FRAME_STYLE);
-	log_area = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_RICH);
+	log_area = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_RICH2);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(log_area, wxSizerFlags(1).Expand());
@@ -166,32 +170,19 @@ InputDeviceLogFrame::~InputDeviceLogFrame()
 
 }
 
-void InputDeviceLogFrame::_RtMidiCallback(double timeStamp, std::vector<unsigned char>* message, void* userData)
+void InputDeviceLogFrame::OnIdle(wxIdleEvent&)
 {
-	if (userData)
+	assert(m_buffer_ui.empty());
 	{
-		((InputDeviceLogFrame*)userData)->RtMidiCallback(timeStamp, message);
+		std::lock_guard<std::mutex> lock(m_buffer_mutex);
+		std::swap(m_buffer, m_buffer_ui);
 	}
-}
-
-void InputDeviceLogFrame::RtMidiCallback(double timeStamp, std::vector<unsigned char>* message)
-{
-	struct MidiInData
+	if (m_buffer_ui.empty())
 	{
-		double timeStamp;
-		std::vector<unsigned char> message;
-	};
-	MidiInData data;
-	data.timeStamp = timeStamp;
-	if (message)
-	{
-		data.message.resize(message->size());
-		for (size_t i = 0; i < message->size(); ++i)
-		{
-			data.message[i] = (*message)[i];
-		}
+		return;
 	}
-	CallAfter([this, data]() {
+	for (const Log& data : m_buffer_ui)
+	{
 		if (!data.message.empty())
 		{
 			log_area->SetDefaultStyle(m_textattr_raw);
@@ -211,5 +202,28 @@ void InputDeviceLogFrame::RtMidiCallback(double timeStamp, std::vector<unsigned 
 			log_area->AppendText(info);
 			log_area->AppendText(wxT("\n"));
 		}
-	});
+	}
+	m_buffer_ui.clear();
+}
+
+void InputDeviceLogFrame::_RtMidiCallback(double timeStamp, std::vector<unsigned char>* message, void* userData)
+{
+	if (userData)
+	{
+		((InputDeviceLogFrame*)userData)->RtMidiCallback(timeStamp, message);
+	}
+}
+
+void InputDeviceLogFrame::RtMidiCallback(double timeStamp, std::vector<unsigned char>* message)
+{
+	if (message && !message->empty())
+	{
+		Log data;
+		data.message = *message;
+		{
+			std::lock_guard<std::mutex> lock(m_buffer_mutex);
+			m_buffer.push_back(std::move(data));
+		}
+		wxWakeUpIdle();
+	}
 }
