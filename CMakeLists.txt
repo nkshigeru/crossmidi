@@ -16,27 +16,4 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-add_library(midimonilib STATIC
-  InputDeviceLogFrame.h
-  InputDeviceLogFrame.cpp
-  InputDevicePanel.h
-  InputDevicePanel.cpp
-  MainFrame.h
-  MainFrame.cpp
-)
-target_include_directories(midimonilib
-  PUBLIC ${wxWidgets_INCLUDE_DIRS}
-)
-target_link_libraries(midimonilib
-  rtmidi
-  wxWidgets::core
-)
-add_executable(MIDI-moni WIN32
-  App.h
-  App.cpp
-)
-target_link_libraries(MIDI-moni
-  midimonilib
-)
-
-add_subdirectory(test)
+add_subdirectory(src/midi-moni)
