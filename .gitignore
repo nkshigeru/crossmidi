@@ -1,4 +1,2 @@
 /.vs
-/thirdparty/build
-/thirdparty/Win32
 CMakeSettings.json
