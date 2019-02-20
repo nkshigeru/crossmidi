@@ -47,38 +47,31 @@ std::string midi2str(const unsigned char* data, size_t len, crossmidi::MidiTimeC
 		break;
 	case crossmidi::MidiMessage::MTC_FRAME_LSB:
 		mtc.frame = (mtc.frame & 0xF0) | (m.time_code.frame & 0x0F);
-		os << "Frame LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame
-			<< " TimeCode: " << mtc;
+		os << "Frame LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame;
 		break;
 	case crossmidi::MidiMessage::MTC_FRAME_MSB:
 		mtc.frame = (m.time_code.frame & 0xF0) | (mtc.frame & 0x0F);
-		os << "Frame MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame
-			<< " TimeCode: " << mtc;
+		os << "Frame MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.frame;
 		break;
 	case crossmidi::MidiMessage::MTC_SECOND_LSB:
 		mtc.second = (mtc.second & 0xF0) | (m.time_code.second & 0x0F);
-		os << "Second LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second
-			<< " TimeCode: " << mtc;
+		os << "Second LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
 		break;
 	case crossmidi::MidiMessage::MTC_SECOND_MSB:
 		mtc.second = (m.time_code.second & 0xF0) | (mtc.second & 0x0F);
-		os << "Second MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second
-			<< " TimeCode: " << mtc;
+		os << "Second MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
 		break;
 	case crossmidi::MidiMessage::MTC_MINUTE_LSB:
 		mtc.minute = (mtc.minute & 0xF0) | (m.time_code.minute & 0x0F);
-		os << "Minute LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second
-			<< " TimeCode: " << mtc;
+		os << "Minute LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.second;
 		break;
 	case crossmidi::MidiMessage::MTC_MINUTE_MSB:
 		mtc.minute = (m.time_code.minute & 0xF0) | (mtc.minute & 0x0F);
-		os << "Minute MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.minute
-			<< " TimeCode: " << mtc;
+		os << "Minute MSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.minute;
 		break;
 	case crossmidi::MidiMessage::MTC_HOUR_LSB:
 		mtc.hour = (mtc.hour & 0xF0) | (m.time_code.hour & 0x0F);
-		os << "Hour LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.hour
-			<< " TimeCode: " << mtc;
+		os << "Hour LSB: 0x" << std::setw(2) << std::setfill('0') << std::hex << (int)m.time_code.hour;
 		break;
 	case crossmidi::MidiMessage::MTC_RATE_HOUR_MSB:
 		mtc.rate = m.time_code.rate;

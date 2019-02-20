@@ -1,0 +1,12 @@
+add_executable(MIDI-chrono WIN32
+  App.h
+  App.cpp
+  Chrono.h
+  Chrono.cpp
+  ChronoFrame.h
+  ChronoFrame.cpp
+)
+target_link_libraries(MIDI-chrono
+  rtmidi
+  wxWidgets::core
+)

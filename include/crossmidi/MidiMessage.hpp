@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 namespace crossmidi {
 
 struct MidiNote
@@ -168,6 +170,68 @@ struct MidiMessage {
 			break;
 		}
 		return m;
+	}
+
+	bool ToBytes(std::vector<unsigned char>& data) const
+	{
+		switch (type)
+		{
+		case MTC_FRAME_LSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x00 | (time_code.frame & 0x0F);
+			return true;
+		case MTC_FRAME_MSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x10 | ((time_code.frame >> 4) & 0x0F);
+			return true;
+		case MTC_SECOND_LSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x20 | (time_code.second & 0x0F);
+			return true;
+		case MTC_SECOND_MSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x30 | ((time_code.second >> 4) & 0x0F);
+			return true;
+		case MTC_MINUTE_LSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x40 | (time_code.minute & 0x0F);
+			return true;
+		case MTC_MINUTE_MSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x50 | ((time_code.minute >> 4) & 0x0F);
+			return true;
+		case MTC_HOUR_LSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x60 | (time_code.hour & 0x0F);
+			return true;
+		case MTC_RATE_HOUR_MSB:
+			data.resize(2);
+			data[0] = 0xF1;
+			data[1] = 0x70 | ((time_code.rate & 0x03) << 1) | ((time_code.hour >> 4) & 0x01);
+			return true;
+		case MTC:
+			data.resize(10);
+			data[0] = 0xF0;
+			data[1] = 0x7F;
+			data[2] = 0x7F;
+			data[3] = 0x01;
+			data[4] = 0x01;
+			data[5] = ((time_code.rate & 0x03) << 5) | (time_code.hour & 0x1F);
+			data[6] = time_code.minute;
+			data[7] = time_code.second;
+			data[8] = time_code.frame;
+			data[9] = 0xF7;
+			return true;
+		}
+
+		return false;
 	}
 };
 
