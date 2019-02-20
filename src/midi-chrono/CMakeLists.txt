@@ -10,3 +10,6 @@ target_link_libraries(MIDI-chrono
   rtmidi
   wxWidgets::core
 )
+install(TARGETS MIDI-chrono
+  RUNTIME DESTINATION .
+)

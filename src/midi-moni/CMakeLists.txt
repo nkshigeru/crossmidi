@@ -12,3 +12,6 @@ target_link_libraries(MIDI-moni
   rtmidi
   wxWidgets::core
 )
+install(TARGETS MIDI-moni
+  RUNTIME DESTINATION .
+)
