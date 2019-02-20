@@ -18,3 +18,4 @@ include_directories(
 
 add_subdirectory(src/midi-chrono)
 add_subdirectory(src/midi-moni)
+add_subdirectory(test)
