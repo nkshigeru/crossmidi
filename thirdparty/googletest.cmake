@@ -14,9 +14,18 @@ ExternalProject_Add(googletest
 ExternalProject_Get_Property(googletest INSTALL_DIR)
 file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
 add_library(GTest::GTest STATIC IMPORTED)
-set_target_properties(GTest::GTest PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "${INSTALL_DIR}/include"
-  IMPORTED_LOCATION_DEBUG "${INSTALL_DIR}/lib/gtestd.lib"
-  IMPORTED_LOCATION_RELEASE "${INSTALL_DIR}/lib/gtest.lib"
-)
+if(MSVC)
+  set_target_properties(GTest::GTest PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${INSTALL_DIR}/include"
+    IMPORTED_LOCATION_DEBUG "${INSTALL_DIR}/lib/gtestd.lib"
+    IMPORTED_LOCATION_RELEASE "${INSTALL_DIR}/lib/gtest.lib"
+  )
+endif()
+if(APPLE)
+  set_target_properties(GTest::GTest PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${INSTALL_DIR}/include"
+    IMPORTED_LOCATION_DEBUG "${INSTALL_DIR}/lib/libgtestd.a"
+    IMPORTED_LOCATION "${INSTALL_DIR}/lib/libgtest.a"
+  )
+endif()
 add_dependencies(GTest::GTest googletest)
