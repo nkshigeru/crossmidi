@@ -67,9 +67,15 @@ struct MidiMessage {
 		MidiTimeCode time_code;
 	};
 
+	static MidiMessage FromBytes(const std::vector<unsigned char>& data)
+	{
+		return FromBytes(data.data(), data.size());
+	}
+
 	static MidiMessage FromBytes(const unsigned char* data, size_t len)
 	{
 		MidiMessage m;
+		m.type = NONE;
 		switch (len)
 		{
 		case 1:
@@ -93,7 +99,6 @@ struct MidiMessage {
 			switch (data[0])
 			{
 			case 0xF1: //Quarter frame message
-				m.time_code.clear();
 				switch (data[1] & 0xF0)
 				{
 				case 0x00:
@@ -137,19 +142,19 @@ struct MidiMessage {
 			{
 			case 0x80://NoteOff
 				m.type = NOTE_OFF;
-				m.note.ch = data[0] & 0xF;
+				m.note.ch = data[0] & 0x0F;
 				m.note.note = data[1];
 				m.note.velocity = data[2];
 				break;
 			case 0x90://NoteOn
 				m.type = NOTE_ON;
-				m.note.ch = data[0] & 0xF;
+				m.note.ch = data[0] & 0x0F;
 				m.note.note = data[1];
 				m.note.velocity = data[2];
 				break;
 			case 0xB0://CC
 				m.type = CC;
-				m.note.ch = data[0] & 0xF;
+				m.note.ch = data[0] & 0x0F;
 				m.cc.number = data[1];
 				m.cc.value = data[2];
 				break;
@@ -176,6 +181,24 @@ struct MidiMessage {
 	{
 		switch (type)
 		{
+		case NOTE_ON:
+			data.resize(3);
+			data[0] = 0x90 | note.ch & 0x0F;
+			data[1] = note.note;
+			data[2] = note.velocity;
+			return true;
+		case NOTE_OFF:
+			data.resize(3);
+			data[0] = 0x80 | note.ch & 0x0F;
+			data[1] = note.note;
+			data[2] = note.velocity;
+			return true;
+		case CC:
+			data.resize(3);
+			data[0] = 0xB0 | note.ch & 0x0F;
+			data[1] = cc.number;
+			data[2] = cc.value;
+			return true;
 		case MTC_FRAME_LSB:
 			data.resize(2);
 			data[0] = 0xF1;
@@ -228,6 +251,22 @@ struct MidiMessage {
 			data[7] = time_code.second;
 			data[8] = time_code.frame;
 			data[9] = 0xF7;
+			return true;
+		case CLOCK:
+			data.resize(1);
+			data[0] = 0xF8;
+			return true;
+		case CLOCK_START:
+			data.resize(1);
+			data[0] = 0xFA;
+			return true;
+		case CLOCK_CONTINUE:
+			data.resize(1);
+			data[0] = 0xFB;
+			return true;
+		case CLOCK_STOP:
+			data.resize(1);
+			data[0] = 0xFC;
 			return true;
 		}
 

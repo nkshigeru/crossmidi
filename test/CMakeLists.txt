@@ -1,11 +1,12 @@
-add_executable(test_midi_moni
-  test.cpp
+add_executable(test_crossmidi
+  main.cpp
+  test_midi_message.cpp
 )
-target_link_libraries(test_midi_moni
+target_link_libraries(test_crossmidi
   GTest::GTest
 )
 
 add_test(
-  NAME test_midi_moni
-  COMMAND $<TARGET_FILE:test_midi_moni>
+  NAME test_crossmidi
+  COMMAND $<TARGET_FILE:test_crossmidi>
 )
