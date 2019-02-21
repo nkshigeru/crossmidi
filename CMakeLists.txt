@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(midi-moni)
+project(CrossMIDI)
 enable_testing()
 
 string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
