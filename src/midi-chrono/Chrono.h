@@ -25,8 +25,16 @@ public:
 		START,
 	};
 
-	typedef std::function<void(const crossmidi::MidiTimeCode& mtc, int quarter_frame)> Callback;
-	void set_callback(Callback callback);
+	class Listener
+	{
+	public:
+		virtual void start(const crossmidi::MidiTimeCode& mtc) = 0;
+		virtual void stop(const crossmidi::MidiTimeCode& mtc) = 0;
+		virtual void seek(const crossmidi::MidiTimeCode& mtc, uint64_t tick) = 0;
+		virtual void quarter_frame(const crossmidi::MidiTimeCode& mtc, int quarter_frame) = 0;
+		virtual void clock(uint64_t tick) = 0;
+	};
+	void set_listener(Listener* listener);
 
 private:
 	void run();
@@ -37,6 +45,9 @@ private:
 	Status m_status;
 
 	crossmidi::MidiTimeCode m_time_code;
-	Callback m_callback;
+	uint64_t m_tick;
+	double m_bpm;
+
+	Listener* m_listener;
 
 };

@@ -194,3 +194,25 @@ TEST(MidiMessage, clock_stop) {
 	EXPECT_TRUE(m.ToBytes(data2));
 	EXPECT_EQ(data1, data2);
 }
+
+TEST(MidiMessage, spp) {
+	std::vector<unsigned char> data1 = { 0xF2, 0x01, 0x02 };
+	MidiMessage m = MidiMessage::FromBytes(data1);
+	EXPECT_EQ(m.type, MidiMessage::SPP);
+	EXPECT_EQ(m.clock, 257);// 100000001(2)
+
+	std::vector<unsigned char> data2;
+	EXPECT_TRUE(m.ToBytes(data2));
+	EXPECT_EQ(data1, data2);
+}
+
+TEST(MidiMessage, spp_max) {
+	std::vector<unsigned char> data1 = { 0xF2, 0x7F, 0x7F };
+	MidiMessage m = MidiMessage::FromBytes(data1);
+	EXPECT_EQ(m.type, MidiMessage::SPP);
+	EXPECT_EQ(m.clock, 16383);// 11111111111111(2)
+
+	std::vector<unsigned char> data2;
+	EXPECT_TRUE(m.ToBytes(data2));
+	EXPECT_EQ(data1, data2);
+}

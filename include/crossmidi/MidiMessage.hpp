@@ -60,11 +60,13 @@ struct MidiMessage {
 		CLOCK_START,
 		CLOCK_CONTINUE,
 		CLOCK_STOP,
+		SPP,
 	} type;
 	union {
 		MidiNote note;
 		MidiCC cc;
 		MidiTimeCode time_code;
+		uint32_t clock;
 	};
 
 	static MidiMessage FromBytes(const std::vector<unsigned char>& data)
@@ -138,26 +140,34 @@ struct MidiMessage {
 			}
 			break;
 		case 3:
-			switch (data[0] & 0xF0)
+			switch (data[0])
 			{
-			case 0x80://NoteOff
-				m.type = NOTE_OFF;
-				m.note.ch = data[0] & 0x0F;
-				m.note.note = data[1];
-				m.note.velocity = data[2];
+			case 0xF2://SPP
+				m.type = SPP;
+				m.clock = (data[2] << 7) | data[1];
 				break;
-			case 0x90://NoteOn
-				m.type = NOTE_ON;
-				m.note.ch = data[0] & 0x0F;
-				m.note.note = data[1];
-				m.note.velocity = data[2];
-				break;
-			case 0xB0://CC
-				m.type = CC;
-				m.note.ch = data[0] & 0x0F;
-				m.cc.number = data[1];
-				m.cc.value = data[2];
-				break;
+			default:
+				switch (data[0] & 0xF0)
+				{
+				case 0x80://NoteOff
+					m.type = NOTE_OFF;
+					m.note.ch = data[0] & 0x0F;
+					m.note.note = data[1];
+					m.note.velocity = data[2];
+					break;
+				case 0x90://NoteOn
+					m.type = NOTE_ON;
+					m.note.ch = data[0] & 0x0F;
+					m.note.note = data[1];
+					m.note.velocity = data[2];
+					break;
+				case 0xB0://CC
+					m.type = CC;
+					m.note.ch = data[0] & 0x0F;
+					m.cc.number = data[1];
+					m.cc.value = data[2];
+					break;
+				}
 			}
 			break;
 		case 10:
@@ -267,6 +277,12 @@ struct MidiMessage {
 		case CLOCK_STOP:
 			data.resize(1);
 			data[0] = 0xFC;
+			return true;
+		case SPP:
+			data.resize(3);
+			data[0] = 0xF2;
+			data[1] = clock & 0x7F;
+			data[2] = (clock >> 7) & 0x7F;
 			return true;
 		}
 
