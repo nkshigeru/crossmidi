@@ -8,6 +8,7 @@ Chrono::Chrono() : m_listener(nullptr)
 	m_time_code.rate = crossmidi::MidiTimeCode::FRAMERATE_25;
 	m_tick = 0;
 	m_bpm = 120;
+	m_seek.on = false;
 	m_thread = std::thread(&Chrono::run, this);
 }
 
@@ -46,13 +47,10 @@ void Chrono::stop()
 void Chrono::rewind()
 {
 	std::unique_lock<std::mutex> lock(m_mutex);
-	if (m_status != STOP)
-	{
-		return;
-	}
-	m_time_code.clear();
-	m_time_code.rate = crossmidi::MidiTimeCode::FRAMERATE_25;
-	m_tick = 0;
+	m_seek.on = true;
+	m_seek.time_code.clear();
+	m_seek.time_code.rate = crossmidi::MidiTimeCode::FRAMERATE_25;
+	m_seek.tick = 0;
 	m_con.notify_all();
 }
 
@@ -67,24 +65,30 @@ void Chrono::run()
 	while (true)
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
-		if (m_status == STOP)
-		{
-			m_con.wait(lock);
-		}
+		m_con.wait(lock, [this]() {
+			return m_status != STOP || m_seek.on;
+		});
 		if (m_status == NONE)
 		{
-			// end of thread
+			// END OF THREAD
 			break;
 		}
-		else if (m_status == STOP)
+		if (m_seek.on)
 		{
+			m_seek.on = false;
+			m_time_code = m_seek.time_code;
+			m_tick = m_seek.tick;
 			if (m_listener)
 			{
 				m_listener->seek(m_time_code, m_tick);
 			}
+		}
+		if (m_status == STOP)
+		{
 			continue;
 		}
 
+		// STARTED
 		ClockT::time_point start_tp = ClockT::now();
 		ClockT::time_point next_quarter_tp;
 		ClockT::time_point next_clock_tp;
@@ -110,12 +114,16 @@ void Chrono::run()
 		std::chrono::duration<double> tick_time(60.0 / 24 / m_bpm);
 		next_clock_tp = start_tp + std::chrono::duration_cast<ClockT::duration>(tick_time);
 
-		// started
 		while (m_status == START)
 		{
 			lock.unlock();
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			lock.lock();
+
+			if (m_seek.on)
+			{
+				break;
+			}
 			if (next_quarter_tp < next_clock_tp)
 			{
 				if (next_quarter_tp < ClockT::now())
@@ -140,6 +148,7 @@ void Chrono::run()
 								++temp_mtc.minute;
 								if (temp_mtc.minute >= 60)
 								{
+									temp_mtc.minute = 0;
 									++temp_mtc.hour;
 								}
 							}
@@ -170,12 +179,12 @@ void Chrono::run()
 
 		if (m_status == NONE)
 		{
-			// end of thread
+			// END OF THREAD
 			break;
 		}
-		else if (m_status == STOP)
+		else
 		{
-			// stopped
+			// STOPPED
 			m_time_code = temp_mtc;
 			if (m_listener)
 			{

@@ -47,6 +47,11 @@ private:
 	crossmidi::MidiTimeCode m_time_code;
 	uint64_t m_tick;
 	double m_bpm;
+	struct {
+		bool on;
+		crossmidi::MidiTimeCode time_code;
+		uint64_t tick;
+	} m_seek;
 
 	Listener* m_listener;
 
