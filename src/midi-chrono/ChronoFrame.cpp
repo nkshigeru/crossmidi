@@ -7,6 +7,8 @@ enum {
 	ID_START,
 	ID_STOP,
 	ID_REWIND,
+	ID_ENABLE_MTC,
+	ID_ENABLE_CLOCK,
 };
 
 wxBEGIN_EVENT_TABLE(ChronoFrame, wxFrame)
@@ -136,6 +138,8 @@ ChronoFrame::ChronoFrame()
 	stop_button = CreateButton(this, ID_STOP, &DrawStopButton, 16, 16);
 	rewind_button = CreateButton(this, ID_REWIND, &DrawRewindButton, 16, 16);
 
+	output_device_list = new wxScrolledCanvas(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(-1, 120)), wxVSCROLL);
+
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->AddSpacer(FromDIP(5));
 	{
@@ -172,6 +176,15 @@ ChronoFrame::ChronoFrame()
 		s1->AddStretchSpacer(1);
 		sizer->Add(s1, wxSizerFlags(0).Expand());
 	}
+	{
+		wxSizer* s1 = new wxBoxSizer(wxHORIZONTAL);
+		s1->Add(new wxStaticText(this, wxID_ANY, _("Output Devices")), wxSizerFlags(1).Expand());
+		s1->Add(new wxStaticText(this, wxID_ANY, _("MTC"), wxDefaultPosition, FromDIP(wxSize(40, -1))), wxSizerFlags().Expand());
+		s1->Add(new wxStaticText(this, wxID_ANY, _("Clock"), wxDefaultPosition, FromDIP(wxSize(40, -1))), wxSizerFlags().Expand());
+		sizer->Add(s1, wxSizerFlags(0).Expand());
+	}
+	SetSizer(sizer);
+	sizer->Add(output_device_list, wxSizerFlags(1).Expand());
 	SetSizerAndFit(sizer);
 
 	m_midi_out = new RtMidiOut();
@@ -196,18 +209,21 @@ void ChronoFrame::LoadDevices()
 {
 	unsigned int n = m_midi_out->getPortCount();
 	std::vector<wxString> list(n);
+	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	for (unsigned int i = 0; i < n; ++i)
 	{
 		try
 		{
-			list[i] = wxString::FromUTF8(m_midi_out->getPortName(i));
+			wxString name = wxString::FromUTF8(m_midi_out->getPortName(i));
+			DeviceItemPanel* item = new DeviceItemPanel(output_device_list, this, i, name);
+			sizer->Add(item, wxSizerFlags().Expand());
 		}
 		catch (RtMidiError& e)
 		{
 			//TODO error
 		}
 	}
-	output_device_choice->Set(list);
+	output_device_list->SetSizer(sizer);
 }
 
 void ChronoFrame::UpdateTimeDisplay()
@@ -263,26 +279,41 @@ void ChronoFrame::OnIdle(wxIdleEvent&)
 
 void ChronoFrame::start(const crossmidi::MidiTimeCode& mtc)
 {
-	std::vector<unsigned char> data;
-	crossmidi::MidiMessage m;
-	if (mtc.hour == 0 && mtc.minute == 0 && mtc.second == 0 && mtc.rate == 0)
 	{
-		m.type = crossmidi::MidiMessage::CLOCK_START;
-	}
-	else
-	{
-		m.type = crossmidi::MidiMessage::CLOCK_CONTINUE;
-	}
-	if (m.ToBytes(data))
-	{
-		m_midi_out->sendMessage(&data);
-	}
+		std::vector<unsigned char> data;
+		crossmidi::MidiMessage m;
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (!m_clock_devices.empty())
+		{
+			if (mtc.hour == 0 && mtc.minute == 0 && mtc.second == 0 && mtc.rate == 0)
+			{
+				m.type = crossmidi::MidiMessage::CLOCK_START;
+			}
+			else
+			{
+				m.type = crossmidi::MidiMessage::CLOCK_CONTINUE;
+			}
+			if (m.ToBytes(data))
+			{
+				for (RtMidiOut* midi_out : m_clock_devices)
+				{
+					midi_out->sendMessage(&data);
+				}
+			}
+		}
 
-	m.type = crossmidi::MidiMessage::MTC;
-	m.time_code = mtc;
-	if (m.ToBytes(data))
-	{
-		m_midi_out->sendMessage(&data);
+		if (!m_mtc_devices.empty())
+		{
+			m.type = crossmidi::MidiMessage::MTC;
+			m.time_code = mtc;
+			if (m.ToBytes(data))
+			{
+				for (RtMidiOut* midi_out : m_mtc_devices)
+				{
+					midi_out->sendMessage(&data);
+				}
+			}
+		}
 	}
 
 	m_time_code_ui = mtc;
@@ -291,19 +322,35 @@ void ChronoFrame::start(const crossmidi::MidiTimeCode& mtc)
 
 void ChronoFrame::stop(const crossmidi::MidiTimeCode& mtc)
 {
-	std::vector<unsigned char> data;
-	crossmidi::MidiMessage m;
-	m.type = crossmidi::MidiMessage::CLOCK_STOP;
-	if (m.ToBytes(data))
 	{
-		m_midi_out->sendMessage(&data);
-	}
+		std::vector<unsigned char> data;
+		crossmidi::MidiMessage m;
+		std::lock_guard<std::mutex> lock(m_mutex);
 
-	m.type = crossmidi::MidiMessage::MTC;
-	m.time_code = mtc;
-	if (m.ToBytes(data))
-	{
-		m_midi_out->sendMessage(&data);
+		if (!m_clock_devices.empty())
+		{
+			m.type = crossmidi::MidiMessage::CLOCK_STOP;
+			if (m.ToBytes(data))
+			{
+				for (RtMidiOut* midi_out : m_clock_devices)
+				{
+					midi_out->sendMessage(&data);
+				}
+			}
+		}
+
+		if (!m_mtc_devices.empty())
+		{
+			m.type = crossmidi::MidiMessage::MTC;
+			m.time_code = mtc;
+			if (m.ToBytes(data))
+			{
+				for (RtMidiOut* midi_out : m_mtc_devices)
+				{
+					midi_out->sendMessage(&data);
+				}
+			}
+		}
 	}
 
 	m_time_code_ui = mtc;
@@ -312,20 +359,35 @@ void ChronoFrame::stop(const crossmidi::MidiTimeCode& mtc)
 
 void ChronoFrame::seek(const crossmidi::MidiTimeCode& mtc, uint64_t tick)
 {
-	std::vector<unsigned char> data;
-	crossmidi::MidiMessage m;
-	m.type = crossmidi::MidiMessage::SPP;
-	m.clock = tick / 6;
-	if (m.ToBytes(data))
 	{
-		m_midi_out->sendMessage(&data);
-	}
+		std::lock_guard<std::mutex> lock(m_mutex);
+		std::vector<unsigned char> data;
+		crossmidi::MidiMessage m;
+		if (!m_clock_devices.empty())
+		{
+			m.type = crossmidi::MidiMessage::SPP;
+			m.clock = tick / 6;
+			if (m.ToBytes(data))
+			{
+				for (RtMidiOut* midi_out : m_clock_devices)
+				{
+					midi_out->sendMessage(&data);
+				}
+			}
+		}
 
-	m.type = crossmidi::MidiMessage::MTC;
-	m.time_code = mtc;
-	if (m.ToBytes(data))
-	{
-		m_midi_out->sendMessage(&data);
+		if (!m_mtc_devices.empty())
+		{
+			m.type = crossmidi::MidiMessage::MTC;
+			m.time_code = mtc;
+			if (m.ToBytes(data))
+			{
+				for (RtMidiOut* midi_out : m_mtc_devices)
+				{
+					midi_out->sendMessage(&data);
+				}
+			}
+		}
 	}
 
 	m_time_code_ui = mtc;
@@ -335,15 +397,24 @@ void ChronoFrame::seek(const crossmidi::MidiTimeCode& mtc, uint64_t tick)
 
 void ChronoFrame::quarter_frame(const crossmidi::MidiTimeCode& mtc, int quarter_frame)
 {
-	std::vector<unsigned char> data;
-	crossmidi::MidiMessage m;
-	if (quarter_frame < 8)
 	{
-		m.type = (crossmidi::MidiMessage::Type)(crossmidi::MidiMessage::MTC_FRAME_LSB + quarter_frame);
-		m.time_code = mtc;
-		if (m.ToBytes(data))
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (!m_mtc_devices.empty())
 		{
-			m_midi_out->sendMessage(&data);
+			std::vector<unsigned char> data;
+			crossmidi::MidiMessage m;
+			if (quarter_frame < 8)
+			{
+				m.type = (crossmidi::MidiMessage::Type)(crossmidi::MidiMessage::MTC_FRAME_LSB + quarter_frame);
+				m.time_code = mtc;
+				if (m.ToBytes(data))
+				{
+					for (RtMidiOut* midi_out : m_mtc_devices)
+					{
+						midi_out->sendMessage(&data);
+					}
+				}
+			}
 		}
 	}
 
@@ -353,13 +424,149 @@ void ChronoFrame::quarter_frame(const crossmidi::MidiTimeCode& mtc, int quarter_
 
 void ChronoFrame::clock(uint64_t tick)
 {
-	std::vector<unsigned char> data;
-	crossmidi::MidiMessage m;
-	m.type = crossmidi::MidiMessage::CLOCK;
-	if (m.ToBytes(data))
 	{
-		m_midi_out->sendMessage(&data);
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (!m_clock_devices.empty())
+		{
+			std::vector<unsigned char> data;
+			crossmidi::MidiMessage m;
+			m.type = crossmidi::MidiMessage::CLOCK;
+			if (m.ToBytes(data))
+			{
+				for (RtMidiOut* midi_out : m_clock_devices)
+				{
+					midi_out->sendMessage(&data);
+				}
+			}
+		}
 	}
 	m_tick_ui = tick;
 	wxWakeUpIdle();
+}
+
+void ChronoFrame::RegisterMTC(RtMidiOut* midi_out, bool enabled)
+{
+	if (midi_out)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (enabled)
+		{
+			auto it = std::find(m_mtc_devices.begin(), m_mtc_devices.end(), midi_out);
+			if (it == m_mtc_devices.end())
+			{
+				m_mtc_devices.push_back(midi_out);
+			}
+		}
+		else
+		{
+			auto it = std::remove(m_mtc_devices.begin(), m_mtc_devices.end(), midi_out);
+			if (it != m_mtc_devices.end())
+			{
+				m_mtc_devices.erase(it, m_mtc_devices.end());
+			}
+		}
+	}
+}
+
+void ChronoFrame::RegisterClock(RtMidiOut* midi_out, bool enabled)
+{
+	if (midi_out)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (enabled)
+		{
+			auto it = std::find(m_clock_devices.begin(), m_clock_devices.end(), midi_out);
+			if (it == m_clock_devices.end())
+			{
+				m_clock_devices.push_back(midi_out);
+			}
+		}
+		else
+		{
+			auto it = std::remove(m_clock_devices.begin(), m_clock_devices.end(), midi_out);
+			if (it != m_clock_devices.end())
+			{
+				m_clock_devices.erase(it, m_clock_devices.end());
+			}
+		}
+	}
+}
+
+wxBEGIN_EVENT_TABLE(DeviceItemPanel, wxPanel)
+	EVT_CHECKBOX(ID_ENABLE_MTC, DeviceItemPanel::OnCheckMTC)
+	EVT_CHECKBOX(ID_ENABLE_CLOCK, DeviceItemPanel::OnCheckClock)
+wxEND_EVENT_TABLE()
+
+DeviceItemPanel::DeviceItemPanel(wxWindow* parent, MidiDeviceRegistry* registry, unsigned int port, const wxString& name)
+	: wxPanel(parent), m_registry(registry), m_midi_out(nullptr), m_port(port), m_enable_mtc(false), m_enable_clock(false)
+{
+	device_name_label = new wxStaticText(this, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+	mtc_check = new wxCheckBox(this, ID_ENABLE_MTC, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(40, -1)));
+	clock_check = new wxCheckBox(this, ID_ENABLE_CLOCK, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(40, -1)));
+	wxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+	sizer->Add(device_name_label, wxSizerFlags(1).Expand());
+	sizer->Add(mtc_check, wxSizerFlags().Expand());
+	sizer->Add(clock_check, wxSizerFlags().Expand());
+	SetSizer(sizer);
+}
+
+DeviceItemPanel::~DeviceItemPanel()
+{
+	if (m_midi_out)
+	{
+		delete m_midi_out;
+	}
+}
+
+void DeviceItemPanel::OnCheckMTC(wxCommandEvent& evt)
+{
+	m_enable_mtc = evt.IsChecked();
+	if (m_enable_mtc)
+	{
+		UpdateDevice();
+		m_registry->RegisterMTC(m_midi_out, true);
+	}
+	else
+	{
+		m_registry->RegisterMTC(m_midi_out, false);
+		UpdateDevice();
+	}
+}
+
+void DeviceItemPanel::OnCheckClock(wxCommandEvent& evt)
+{
+	m_enable_clock = evt.IsChecked();
+	if (m_enable_clock)
+	{
+		UpdateDevice();
+		m_registry->RegisterClock(m_midi_out, true);
+	}
+	else
+	{
+		m_registry->RegisterClock(m_midi_out, false);
+		UpdateDevice();
+	}
+}
+
+void DeviceItemPanel::UpdateDevice()
+{
+	bool on = m_enable_mtc || m_enable_clock;
+	if (on)
+	{
+		if (!m_midi_out)
+		{
+			m_midi_out = new RtMidiOut();
+		}
+		if (!m_midi_out->isPortOpen())
+		{
+			m_midi_out->openPort(m_port);
+		}
+	}
+	else
+	{
+		if (m_midi_out)
+		{
+			m_midi_out->closePort();
+		}
+	}
 }
