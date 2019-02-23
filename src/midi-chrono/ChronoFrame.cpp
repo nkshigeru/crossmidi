@@ -1,4 +1,5 @@
 #include "ChronoFrame.h"
+#include <wx/graphics.h>
 
 enum {
 	ID_ = wxID_HIGHEST,
@@ -16,22 +17,124 @@ wxBEGIN_EVENT_TABLE(ChronoFrame, wxFrame)
 	EVT_IDLE(ChronoFrame::OnIdle)
 wxEND_EVENT_TABLE()
 
+static const wxColour BackgroundColor(25, 25, 26);
+static const wxColour ForegroundColor(255, 255, 255);
+static const wxColour ButtonColor(25, 25, 26);
+static const wxColour FocusColor(39, 179, 238);
+static const wxColour HoverColor(87, 87, 83);
+
+static void DrawStartButton(wxGraphicsContext* gc)
+{
+	gc->SetPen(*wxTRANSPARENT_PEN);
+	gc->SetBrush(*wxWHITE);
+	wxPoint2DDouble points[]{
+		{ 0, 0 },
+		{ 7, 5.5 },
+		{ 0, 11 },
+	};
+	gc->Translate(4.5, 2.5);
+	gc->DrawLines(3, points);
+}
+
+static void DrawStopButton(wxGraphicsContext* gc)
+{
+	gc->SetPen(*wxTRANSPARENT_PEN);
+	gc->SetBrush(*wxWHITE);
+	gc->DrawRectangle(3.5, 3.5, 9, 9);
+}
+
+static void DrawRewindButton(wxGraphicsContext* gc)
+{
+	gc->SetPen(*wxTRANSPARENT_PEN);
+	gc->SetBrush(*wxWHITE);
+	wxPoint2DDouble points[]{
+		{ 9, 0 },
+		{ 2, 5.5 },
+		{ 9, 11 },
+	};
+	gc->Translate(3.5, 2.5);
+	gc->DrawLines(3, points);
+	gc->DrawRectangle(0, 0, 2, 11);
+}
+
+static wxButton* CreateButton(wxWindow* parent, wxWindowID id,
+	void (*draw_function)(wxGraphicsContext*),double draw_width, double draw_height)
+{
+	const int W = 48;
+	const int H = 48;
+	const double scale = parent->GetContentScaleFactor();
+	wxBitmap btn, current, focus;
+	btn.CreateScaled(W, H, 24, scale);
+	current.CreateScaled(W, H, 24, scale);
+	focus.CreateScaled(W, H, 24, scale);
+	{
+		wxMemoryDC dc(btn);
+		wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+		if (gc)
+		{
+			gc->Scale(scale, scale);
+			gc->SetPen(*wxTRANSPARENT_PEN);
+			gc->SetBrush(ButtonColor);
+			gc->DrawRectangle(0, 0, W, H);
+			gc->Scale(W / draw_width, H / draw_height);
+			draw_function(gc);
+			delete gc;
+		}
+	}
+	{
+		wxMemoryDC dc(current);
+		wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+		if (gc)
+		{
+			gc->Scale(scale, scale);
+			gc->SetPen(*wxTRANSPARENT_PEN);
+			gc->SetBrush(HoverColor);
+			gc->DrawRectangle(0, 0, W, H);
+			gc->Scale(W / draw_width, H / draw_height);
+			draw_function(gc);
+			delete gc;
+		}
+	}
+	{
+		wxMemoryDC dc(focus);
+		wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+		if (gc)
+		{
+			gc->Scale(scale, scale);
+			gc->SetPen(wxPen(FocusColor, 2));
+			gc->SetBrush(ButtonColor);
+			gc->DrawRectangle(0, 0, W, H);
+			gc->Scale(W / draw_width, H / draw_height);
+			draw_function(gc);
+			delete gc;
+		}
+	}
+	wxButton* button = new wxButton(parent, id, wxEmptyString, wxDefaultPosition, parent->FromDIP(wxSize(W, H)));
+	button->SetBitmap(btn);
+	button->SetBitmapCurrent(current);
+	button->SetBitmapFocus(focus);
+	return button;
+}
 
 ChronoFrame::ChronoFrame()
 {
     Create(NULL, wxID_ANY, wxT("MIDI Chrono"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
-	SetBackgroundColour(*wxLIGHT_GREY);
+	SetBackgroundColour(BackgroundColor);
+	SetForegroundColour(ForegroundColor);
 	output_device_choice = new wxChoice(this, ID_OUTPUT_DEVICE);
-	wxFont display_font(FromDIP(wxSize(0, 60)), wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-	time_display = new wxStaticText(this, wxID_ANY, wxT("00:00:00.00"), wxDefaultPosition, FromDIP(wxSize(400, 70)),
-		wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
+	wxFont display_font(FromDIP(wxSize(15, 30)), wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	time_display = new wxStaticText(this, wxID_ANY, wxT("00:00:00.00"), wxDefaultPosition, FromDIP(wxSize(200, 30)),
+		wxALIGN_RIGHT | wxST_NO_AUTORESIZE);
 	time_display->SetFont(display_font);
-	tick_display = new wxStaticText(this, wxID_ANY, wxT("00.00.00"), wxDefaultPosition, FromDIP(wxSize(400, 70)),
+	tick_display = new wxStaticText(this, wxID_ANY, wxT("  00.00.00"), wxDefaultPosition, FromDIP(wxSize(200, 30)),
+		wxALIGN_RIGHT | wxST_NO_AUTORESIZE);
+	bpm_display = new wxStaticText(this, wxID_ANY, wxT("120"), wxDefaultPosition, FromDIP(wxSize(50, 30)),
 		wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
+	bpm_display->SetFont(display_font);
 	tick_display->SetFont(display_font);
-	start_button = new wxButton(this, ID_START, wxT(">"));
-	stop_button = new wxButton(this, ID_STOP, wxT("[ ]"));
-	rewind_button = new wxButton(this, ID_REWIND, wxT("|<"));
+	start_button = CreateButton(this, ID_START, &DrawStartButton, 16, 16);
+	stop_button = CreateButton(this, ID_STOP, &DrawStopButton, 16, 16);
+	rewind_button = CreateButton(this, ID_REWIND, &DrawRewindButton, 16, 16);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->AddSpacer(FromDIP(5));
@@ -42,17 +145,31 @@ ChronoFrame::ChronoFrame()
 		s1->AddSpacer(FromDIP(5));
 		s1->Add(output_device_choice, wxSizerFlags(1).Expand());
 		s1->AddSpacer(FromDIP(5));
-		sizer->Add(s1, wxSizerFlags(0).Expand());
+		sizer->Add(s1, wxSizerFlags().Expand());
 	}
-	sizer->AddSpacer(FromDIP(10));
-	sizer->Add(time_display, wxSizerFlags(0).Expand());
-	sizer->Add(tick_display, wxSizerFlags(0).Expand());
 	sizer->AddSpacer(FromDIP(10));
 	{
 		wxSizer* s1 = new wxBoxSizer(wxHORIZONTAL);
-		s1->Add(rewind_button, wxSizerFlags(1));
-		s1->Add(stop_button, wxSizerFlags(1));
-		s1->Add(start_button, wxSizerFlags(1));
+		s1->AddSpacer(FromDIP(50));
+		s1->Add(time_display, wxSizerFlags());
+		sizer->Add(s1, wxSizerFlags());
+	}
+	{
+		wxSizer* s1 = new wxBoxSizer(wxHORIZONTAL);
+		s1->Add(bpm_display, wxSizerFlags());
+		s1->Add(tick_display, wxSizerFlags());
+		sizer->Add(s1, wxSizerFlags());
+	}
+	sizer->AddSpacer(FromDIP(10));
+	{
+		wxSizer* s1 = new wxBoxSizer(wxHORIZONTAL);
+		s1->AddStretchSpacer(1);
+		s1->Add(rewind_button, wxSizerFlags());
+		s1->AddSpacer(FromDIP(10));
+		s1->Add(stop_button, wxSizerFlags());
+		s1->AddSpacer(FromDIP(10));
+		s1->Add(start_button, wxSizerFlags());
+		s1->AddStretchSpacer(1);
 		sizer->Add(s1, wxSizerFlags(0).Expand());
 	}
 	SetSizerAndFit(sizer);

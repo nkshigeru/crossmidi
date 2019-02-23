@@ -14,6 +14,7 @@ public:
 	wxChoice* output_device_choice;
 	wxStaticText* time_display;
 	wxStaticText* tick_display;
+	wxStaticText* bpm_display;
 	wxButton* start_button;
 	wxButton* stop_button;
 	wxButton* rewind_button;
