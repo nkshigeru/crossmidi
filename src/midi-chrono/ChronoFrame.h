@@ -5,6 +5,7 @@
 #include <RtMidi.h>
 #include "crossmidi/MidiMessage.hpp"
 #include "Chrono.h"
+#include "BPMPanel.h"
 
 class DeviceItemPanel;
 
@@ -23,7 +24,7 @@ public:
 
 	wxStaticText* time_display;
 	wxStaticText* tick_display;
-	wxStaticText* bpm_display;
+	BPMPanel* bpm_panel;
 	wxButton* start_button;
 	wxButton* stop_button;
 	wxButton* rewind_button;

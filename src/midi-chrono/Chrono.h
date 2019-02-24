@@ -14,6 +14,9 @@ public:
 	Chrono();
 	~Chrono();
 
+	void setBPM(int value);
+	int getBPM() const;
+
 	void start();
 	void stop();
 	void rewind();
@@ -46,7 +49,7 @@ private:
 
 	crossmidi::MidiTimeCode m_time_code;
 	uint64_t m_tick;
-	double m_bpm;
+	int m_bpm;
 	struct {
 		bool on;
 		crossmidi::MidiTimeCode time_code;

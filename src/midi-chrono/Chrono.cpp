@@ -22,6 +22,24 @@ Chrono::~Chrono()
 	m_thread.join();
 }
 
+void Chrono::setBPM(int value)
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	if (m_status != STOP)
+	{
+		return;
+	}
+	if (value > 0)
+	{
+		m_bpm = value;
+	}
+}
+
+int Chrono::getBPM() const
+{
+	return m_bpm;
+}
+
 void Chrono::start()
 {
 	std::unique_lock<std::mutex> lock(m_mutex);

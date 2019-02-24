@@ -137,12 +137,10 @@ ChronoFrame::ChronoFrame()
 	tick_label->SetFont(label_font);
 	tick_display = new wxStaticText(this, wxID_ANY, wxT("  00.00.00"), wxDefaultPosition, FromDIP(wxSize(200, 30)),
 		wxALIGN_RIGHT | wxST_NO_AUTORESIZE);
-	wxStaticText* bpm_label = new wxStaticText(this, wxID_ANY, _T("BPM"), wxDefaultPosition, FromDIP(wxSize(50, 10)), wxALIGN_CENTER);
+	wxStaticText* bpm_label = new wxStaticText(this, wxID_ANY, _T("BPM"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
 	bpm_label->SetBackgroundColour(*wxBLACK);
 	bpm_label->SetFont(label_font);
-	bpm_display = new wxStaticText(this, wxID_ANY, wxT("120"), wxDefaultPosition, FromDIP(wxSize(50, 30)),
-		wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
-	bpm_display->SetFont(display_font);
+	bpm_panel = new BPMPanel(this);
 	tick_display->SetFont(display_font);
 	start_button = CreateButton(this, ID_START, &DrawStartButton, 16, 16);
 	stop_button = CreateButton(this, ID_STOP, &DrawStopButton, 16, 16);
@@ -190,8 +188,8 @@ ChronoFrame::ChronoFrame()
 		s1->AddStretchSpacer(1);
 		{
 			wxSizer* s2 = new wxBoxSizer(wxVERTICAL);
-			s2->Add(bpm_display, wxSizerFlags());
-			s2->Add(bpm_label, wxSizerFlags());
+			s2->Add(bpm_panel, wxSizerFlags());
+			s2->Add(bpm_label, wxSizerFlags().Expand());
 			s1->Add(s2, wxSizerFlags());
 		}
 		s1->AddSpacer(FromDIP(10));
@@ -227,6 +225,7 @@ ChronoFrame::ChronoFrame()
 	m_tick_ui = 0;
 	UpdateTimeDisplay();
 	UpdateTickDisplay();
+	bpm_panel->SetValue(m_chrono.getBPM());
 
 	start_button->SetFocus();
 }
@@ -290,12 +289,23 @@ void ChronoFrame::OnDeviceSelect(wxCommandEvent& evt)
 
 void ChronoFrame::OnStart(wxCommandEvent&)
 {
+	int bpm = bpm_panel->GetValue();
+	if (bpm == 0)
+	{
+		bpm_panel->SetValue(m_chrono.getBPM());
+	}
+	else
+	{
+		m_chrono.setBPM(bpm);
+	}
+	bpm_panel->Enable(false);
 	m_chrono.start();
 }
 
 void ChronoFrame::OnStop(wxCommandEvent&)
 {
 	m_chrono.stop();
+	bpm_panel->Enable(true);
 }
 
 void ChronoFrame::OnRewind(wxCommandEvent&)

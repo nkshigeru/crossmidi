@@ -1,10 +1,14 @@
 add_executable(MIDI-chrono WIN32
   App.h
   App.cpp
+  BPMPanel.h
+  BPMPanel.cpp
   Chrono.h
   Chrono.cpp
   ChronoFrame.h
   ChronoFrame.cpp
+  DigitPanel.h
+  DigitPanel.cpp
 )
 target_link_libraries(MIDI-chrono
   rtmidi
