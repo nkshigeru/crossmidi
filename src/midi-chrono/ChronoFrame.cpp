@@ -317,7 +317,7 @@ void ChronoFrame::start(const crossmidi::MidiTimeCode& mtc)
 		std::lock_guard<std::mutex> lock(m_mutex);
 		if (!m_clock_devices.empty())
 		{
-			if (mtc.hour == 0 && mtc.minute == 0 && mtc.second == 0 && mtc.rate == 0)
+			if (mtc.hour == 0 && mtc.minute == 0 && mtc.second == 0 && mtc.frame == 0)
 			{
 				m.type = crossmidi::MidiMessage::CLOCK_START;
 			}
