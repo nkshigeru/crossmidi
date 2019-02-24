@@ -46,7 +46,7 @@ std::string midi2str(const unsigned char* data, size_t len, crossmidi::MidiTimeC
 		os << "Stop";
 		break;
 	case crossmidi::MidiMessage::SPP:
-		os << "SPP: " << clock << std::endl;
+		os << "SPP: " << m.clock;
 		break;
 	case crossmidi::MidiMessage::MTC_FRAME_LSB:
 		mtc.frame = (mtc.frame & 0xF0) | (m.time_code.frame & 0x0F);
