@@ -124,12 +124,22 @@ ChronoFrame::ChronoFrame()
     Create(NULL, wxID_ANY, wxT("MIDI Chrono"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
 	SetBackgroundColour(BackgroundColor);
 	SetForegroundColour(ForegroundColor);
+	wxFont label_font(FromDIP(wxSize(0, 8)), wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
 	wxFont display_font(FromDIP(wxSize(15, 30)), wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	wxStaticText* time_label = new wxStaticText(this, wxID_ANY, _T("Time"), wxDefaultPosition, FromDIP(wxSize(200, 10)), wxALIGN_CENTER);
+	time_label->SetBackgroundColour(*wxBLACK);
+	time_label->SetFont(label_font);
 	time_display = new wxStaticText(this, wxID_ANY, wxT("00:00:00.00"), wxDefaultPosition, FromDIP(wxSize(200, 30)),
 		wxALIGN_RIGHT | wxST_NO_AUTORESIZE);
 	time_display->SetFont(display_font);
+	wxStaticText* tick_label = new wxStaticText(this, wxID_ANY, _T("Bars"), wxDefaultPosition, FromDIP(wxSize(200, 10)), wxALIGN_CENTER);
+	tick_label->SetBackgroundColour(*wxBLACK);
+	tick_label->SetFont(label_font);
 	tick_display = new wxStaticText(this, wxID_ANY, wxT("  00.00.00"), wxDefaultPosition, FromDIP(wxSize(200, 30)),
 		wxALIGN_RIGHT | wxST_NO_AUTORESIZE);
+	wxStaticText* bpm_label = new wxStaticText(this, wxID_ANY, _T("BPM"), wxDefaultPosition, FromDIP(wxSize(50, 10)), wxALIGN_CENTER);
+	bpm_label->SetBackgroundColour(*wxBLACK);
+	bpm_label->SetFont(label_font);
 	bpm_display = new wxStaticText(this, wxID_ANY, wxT("120"), wxDefaultPosition, FromDIP(wxSize(50, 30)),
 		wxALIGN_CENTRE_HORIZONTAL | wxST_NO_AUTORESIZE);
 	bpm_display->SetFont(display_font);
@@ -138,31 +148,61 @@ ChronoFrame::ChronoFrame()
 	stop_button = CreateButton(this, ID_STOP, &DrawStopButton, 16, 16);
 	rewind_button = CreateButton(this, ID_REWIND, &DrawRewindButton, 16, 16);
 
+	wxWindow* list_header = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	list_header->SetBackgroundColour(*wxBLACK);
+	list_header->SetForegroundColour(ForegroundColor);
+	{
+		wxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+		wxStaticText* devices_label = new wxStaticText(list_header, wxID_ANY, _("Output Devices"));
+		wxStaticText* mtc_label = new wxStaticText(list_header, wxID_ANY, _("MTC"), wxDefaultPosition, FromDIP(wxSize(40, -1)));
+		wxStaticText* clock_label = new wxStaticText(list_header, wxID_ANY, _("Clock"), wxDefaultPosition, FromDIP(wxSize(40, -1)));
+		sizer->AddSpacer(FromDIP(5));
+		sizer->Add(devices_label, wxSizerFlags(1).Expand());
+		sizer->Add(mtc_label, wxSizerFlags().Expand());
+		sizer->Add(clock_label, wxSizerFlags().Expand());
+		list_header->SetSizer(sizer);
+	}
+
 	output_device_list = new wxScrolledCanvas(this, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(-1, 80)), wxVSCROLL);
 	output_device_list->SetBackgroundColour(ListBackgroundColor);
 
 	wxSizer* sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->AddSpacer(FromDIP(5));
-	{
-		wxSizer* s1 = new wxBoxSizer(wxHORIZONTAL);
-		s1->Add(new wxStaticText(this, wxID_ANY, _("Output Devices")), wxSizerFlags(1).Expand());
-		s1->Add(new wxStaticText(this, wxID_ANY, _("MTC"), wxDefaultPosition, FromDIP(wxSize(40, -1))), wxSizerFlags().Expand());
-		s1->Add(new wxStaticText(this, wxID_ANY, _("Clock"), wxDefaultPosition, FromDIP(wxSize(40, -1))), wxSizerFlags().Expand());
-		sizer->Add(s1, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT, FromDIP(8)));
-	}
+	sizer->Add(list_header, wxSizerFlags(0).Expand().Border(wxLEFT | wxRIGHT, FromDIP(8)));
 	sizer->Add(output_device_list, wxSizerFlags(1).Expand().Border(wxLEFT | wxRIGHT, FromDIP(8)));
 	sizer->AddSpacer(FromDIP(10));
 	{
 		wxSizer* s1 = new wxBoxSizer(wxHORIZONTAL);
 		s1->AddSpacer(FromDIP(50));
-		s1->Add(time_display, wxSizerFlags());
-		sizer->Add(s1, wxSizerFlags());
+		s1->AddStretchSpacer(1);
+		{
+			wxSizer* s2 = new wxBoxSizer(wxVERTICAL);
+			s2->Add(time_display, wxSizerFlags());
+			s2->Add(time_label, wxSizerFlags());
+			s1->Add(s2, wxSizerFlags());
+		}
+		s1->AddSpacer(FromDIP(8));
+		sizer->Add(s1, wxSizerFlags().Expand());
 	}
 	{
 		wxSizer* s1 = new wxBoxSizer(wxHORIZONTAL);
-		s1->Add(bpm_display, wxSizerFlags());
-		s1->Add(tick_display, wxSizerFlags());
-		sizer->Add(s1, wxSizerFlags());
+		s1->AddSpacer(FromDIP(8));
+		s1->AddStretchSpacer(1);
+		{
+			wxSizer* s2 = new wxBoxSizer(wxVERTICAL);
+			s2->Add(bpm_display, wxSizerFlags());
+			s2->Add(bpm_label, wxSizerFlags());
+			s1->Add(s2, wxSizerFlags());
+		}
+		s1->AddSpacer(FromDIP(10));
+		{
+			wxSizer* s2 = new wxBoxSizer(wxVERTICAL);
+			s2->Add(tick_display, wxSizerFlags());
+			s2->Add(tick_label, wxSizerFlags());
+			s1->Add(s2, wxSizerFlags());
+		}
+		s1->AddSpacer(FromDIP(8));
+		sizer->Add(s1, wxSizerFlags().Expand());
 	}
 	sizer->AddSpacer(FromDIP(10));
 	{
@@ -497,6 +537,7 @@ DeviceItemPanel::DeviceItemPanel(wxWindow* parent, MidiDeviceRegistry* registry,
 	mtc_check = new wxCheckBox(this, ID_ENABLE_MTC, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(40, -1)));
 	clock_check = new wxCheckBox(this, ID_ENABLE_CLOCK, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(40, -1)));
 	wxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+	sizer->AddSpacer(FromDIP(5));
 	sizer->Add(device_name_label, wxSizerFlags(1).Expand());
 	sizer->Add(mtc_check, wxSizerFlags().Expand());
 	sizer->Add(clock_check, wxSizerFlags().Expand());
