@@ -17,6 +17,7 @@ wxBEGIN_EVENT_TABLE(ChronoFrame, wxFrame)
 	EVT_BUTTON(ID_STOP, ChronoFrame::OnStop)
 	EVT_BUTTON(ID_REWIND, ChronoFrame::OnRewind)
 	EVT_IDLE(ChronoFrame::OnIdle)
+	EVT_TIME_CODE_CHANGED(wxID_ANY, ChronoFrame::OnTimeCodeChanged)
 wxEND_EVENT_TABLE()
 
 static const wxColour BackgroundColor(60, 60, 60);
@@ -126,12 +127,10 @@ ChronoFrame::ChronoFrame()
 	SetForegroundColour(ForegroundColor);
 	wxFont label_font(FromDIP(wxSize(0, 8)), wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
 	wxFont display_font(FromDIP(wxSize(15, 30)), wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-	wxStaticText* time_label = new wxStaticText(this, wxID_ANY, _T("Time"), wxDefaultPosition, FromDIP(wxSize(200, 10)), wxALIGN_CENTER);
+	wxStaticText* time_label = new wxStaticText(this, wxID_ANY, _T("Time"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
 	time_label->SetBackgroundColour(*wxBLACK);
 	time_label->SetFont(label_font);
-	time_display = new wxStaticText(this, wxID_ANY, wxT("00:00:00.00"), wxDefaultPosition, FromDIP(wxSize(200, 30)),
-		wxALIGN_RIGHT | wxST_NO_AUTORESIZE);
-	time_display->SetFont(display_font);
+	time_code_panel = new TimeCodePanel(this);
 	wxStaticText* tick_label = new wxStaticText(this, wxID_ANY, _T("Bars"), wxDefaultPosition, FromDIP(wxSize(200, 10)), wxALIGN_CENTER);
 	tick_label->SetBackgroundColour(*wxBLACK);
 	tick_label->SetFont(label_font);
@@ -175,8 +174,8 @@ ChronoFrame::ChronoFrame()
 		s1->AddStretchSpacer(1);
 		{
 			wxSizer* s2 = new wxBoxSizer(wxVERTICAL);
-			s2->Add(time_display, wxSizerFlags());
-			s2->Add(time_label, wxSizerFlags());
+			s2->Add(time_code_panel, wxSizerFlags());
+			s2->Add(time_label, wxSizerFlags().Expand());
 			s1->Add(s2, wxSizerFlags());
 		}
 		s1->AddSpacer(FromDIP(8));
@@ -222,6 +221,7 @@ ChronoFrame::ChronoFrame()
 	
 	m_chrono.set_listener(this);
 	m_time_code_ui.clear();
+	m_time_code_ui.rate = crossmidi::MidiTimeCode::FRAMERATE_25;
 	m_tick_ui = 0;
 	UpdateTimeDisplay();
 	UpdateTickDisplay();
@@ -259,8 +259,7 @@ void ChronoFrame::LoadDevices()
 
 void ChronoFrame::UpdateTimeDisplay()
 {
-	time_display->SetLabel(wxString::Format(wxT("%02d:%02d:%02d.%02d"),
-		(int)m_time_code_ui.hour, (int)m_time_code_ui.minute, (int)m_time_code_ui.second, (int)m_time_code_ui.frame));
+	time_code_panel->SetValue(m_time_code_ui);
 }
 
 void ChronoFrame::UpdateTickDisplay()
@@ -289,6 +288,7 @@ void ChronoFrame::OnDeviceSelect(wxCommandEvent& evt)
 
 void ChronoFrame::OnStart(wxCommandEvent&)
 {
+	time_code_panel->Enable(false);
 	int bpm = bpm_panel->GetValue();
 	if (bpm == 0)
 	{
@@ -305,6 +305,7 @@ void ChronoFrame::OnStart(wxCommandEvent&)
 void ChronoFrame::OnStop(wxCommandEvent&)
 {
 	m_chrono.stop();
+	time_code_panel->Enable(true);
 	bpm_panel->Enable(true);
 }
 
@@ -317,6 +318,12 @@ void ChronoFrame::OnIdle(wxIdleEvent&)
 {
 	UpdateTimeDisplay();
 	UpdateTickDisplay();
+}
+
+void ChronoFrame::OnTimeCodeChanged(TimeCodeEvent& evt)
+{
+	m_time_code_ui = evt.GetTimeCode();
+	m_chrono.setTimeCode(m_time_code_ui);
 }
 
 void ChronoFrame::start(const crossmidi::MidiTimeCode& mtc)

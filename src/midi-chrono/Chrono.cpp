@@ -22,6 +22,21 @@ Chrono::~Chrono()
 	m_thread.join();
 }
 
+void Chrono::setTimeCode(const crossmidi::MidiTimeCode& time_code)
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	m_seek.on = true;
+	m_seek.time_code = time_code;
+	m_seek.tick = m_tick;
+	m_con.notify_all();
+}
+
+crossmidi::MidiTimeCode Chrono::getTimeCode()
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	return m_time_code;
+}
+
 void Chrono::setBPM(int value)
 {
 	std::unique_lock<std::mutex> lock(m_mutex);

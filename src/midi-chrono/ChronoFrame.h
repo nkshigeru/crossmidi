@@ -6,6 +6,7 @@
 #include "crossmidi/MidiMessage.hpp"
 #include "Chrono.h"
 #include "BPMPanel.h"
+#include "TimeCodePanel.h"
 
 class DeviceItemPanel;
 
@@ -22,7 +23,7 @@ public:
 	ChronoFrame();
 	virtual ~ChronoFrame();
 
-	wxStaticText* time_display;
+	TimeCodePanel* time_code_panel;
 	wxStaticText* tick_display;
 	BPMPanel* bpm_panel;
 	wxButton* start_button;
@@ -40,6 +41,8 @@ private:
 	void OnStop(wxCommandEvent&);
 	void OnRewind(wxCommandEvent&);
 	void OnIdle(wxIdleEvent&);
+
+	void OnTimeCodeChanged(TimeCodeEvent&);
 
 	//Chrono::Listener
 	void start(const crossmidi::MidiTimeCode& mtc) override;

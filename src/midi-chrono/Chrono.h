@@ -14,6 +14,8 @@ public:
 	Chrono();
 	~Chrono();
 
+	void setTimeCode(const crossmidi::MidiTimeCode& time_code);
+	crossmidi::MidiTimeCode getTimeCode();
 	void setBPM(int value);
 	int getBPM() const;
 
