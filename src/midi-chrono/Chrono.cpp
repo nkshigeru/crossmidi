@@ -37,6 +37,21 @@ crossmidi::MidiTimeCode Chrono::getTimeCode()
 	return m_time_code;
 }
 
+void Chrono::setTick(uint64_t tick)
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	m_seek.on = true;
+	m_seek.time_code = m_time_code;
+	m_seek.tick = tick;
+	m_con.notify_all();
+}
+
+uint64_t Chrono::getTick()
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	return m_tick;
+}
+
 void Chrono::setBPM(int value)
 {
 	std::unique_lock<std::mutex> lock(m_mutex);

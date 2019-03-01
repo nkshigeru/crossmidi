@@ -9,6 +9,8 @@ add_executable(MIDI-chrono WIN32
   ChronoFrame.cpp
   DigitPanel.h
   DigitPanel.cpp
+  TickPanel.h
+  TickPanel.cpp
   TimeCodePanel.h
   TimeCodePanel.cpp
 )

@@ -18,6 +18,7 @@ wxBEGIN_EVENT_TABLE(ChronoFrame, wxFrame)
 	EVT_BUTTON(ID_REWIND, ChronoFrame::OnRewind)
 	EVT_IDLE(ChronoFrame::OnIdle)
 	EVT_TIME_CODE_CHANGED(wxID_ANY, ChronoFrame::OnTimeCodeChanged)
+	EVT_TICK_CHANGED(wxID_ANY, ChronoFrame::OnTickChanged)
 wxEND_EVENT_TABLE()
 
 static const wxColour BackgroundColor(60, 60, 60);
@@ -123,24 +124,22 @@ static wxButton* CreateButton(wxWindow* parent, wxWindowID id,
 ChronoFrame::ChronoFrame()
 {
     Create(NULL, wxID_ANY, wxT("MIDI Chrono"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE);
+	SetInitialSize(FromDIP(wxSize(320, 280)));
 	SetBackgroundColour(BackgroundColor);
 	SetForegroundColour(ForegroundColor);
 	wxFont label_font(FromDIP(wxSize(0, 8)), wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
-	wxFont display_font(FromDIP(wxSize(15, 30)), wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 	wxStaticText* time_label = new wxStaticText(this, wxID_ANY, _T("Time"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
 	time_label->SetBackgroundColour(*wxBLACK);
 	time_label->SetFont(label_font);
 	time_code_panel = new TimeCodePanel(this);
-	wxStaticText* tick_label = new wxStaticText(this, wxID_ANY, _T("Bars"), wxDefaultPosition, FromDIP(wxSize(200, 10)), wxALIGN_CENTER);
+	wxStaticText* tick_label = new wxStaticText(this, wxID_ANY, _T("Bars"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
 	tick_label->SetBackgroundColour(*wxBLACK);
 	tick_label->SetFont(label_font);
-	tick_display = new wxStaticText(this, wxID_ANY, wxT("  00.00.00"), wxDefaultPosition, FromDIP(wxSize(200, 30)),
-		wxALIGN_RIGHT | wxST_NO_AUTORESIZE);
+	tick_panel = new TickPanel(this);
 	wxStaticText* bpm_label = new wxStaticText(this, wxID_ANY, _T("BPM"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
 	bpm_label->SetBackgroundColour(*wxBLACK);
 	bpm_label->SetFont(label_font);
 	bpm_panel = new BPMPanel(this);
-	tick_display->SetFont(display_font);
 	start_button = CreateButton(this, ID_START, &DrawStartButton, 16, 16);
 	stop_button = CreateButton(this, ID_STOP, &DrawStopButton, 16, 16);
 	rewind_button = CreateButton(this, ID_REWIND, &DrawRewindButton, 16, 16);
@@ -191,11 +190,11 @@ ChronoFrame::ChronoFrame()
 			s2->Add(bpm_label, wxSizerFlags().Expand());
 			s1->Add(s2, wxSizerFlags());
 		}
-		s1->AddSpacer(FromDIP(10));
+		s1->AddSpacer(FromDIP(20));
 		{
 			wxSizer* s2 = new wxBoxSizer(wxVERTICAL);
-			s2->Add(tick_display, wxSizerFlags());
-			s2->Add(tick_label, wxSizerFlags());
+			s2->Add(tick_panel, wxSizerFlags());
+			s2->Add(tick_label, wxSizerFlags().Expand());
 			s1->Add(s2, wxSizerFlags());
 		}
 		s1->AddSpacer(FromDIP(8));
@@ -214,7 +213,7 @@ ChronoFrame::ChronoFrame()
 		sizer->Add(s1, wxSizerFlags(0).Expand());
 	}
 	sizer->AddSpacer(FromDIP(10));
-	SetSizerAndFit(sizer);
+	SetSizer(sizer);
 
 	m_midi_out = new RtMidiOut();
 	LoadDevices();
@@ -264,13 +263,7 @@ void ChronoFrame::UpdateTimeDisplay()
 
 void ChronoFrame::UpdateTickDisplay()
 {
-	uint64_t tick = m_tick_ui;
-	uint64_t bars = tick / (24 * 4);
-	tick -= bars * 24 * 4;
-	uint64_t beats = tick / 24;
-	tick -= beats * 24;
-	tick_display->SetLabel(wxString::Format(wxT("%02d.%02d.%02d"),
-		(int)bars + 1, (int)beats + 1, (int)tick));
+	tick_panel->SetValue(m_tick_ui);
 }
 
 void ChronoFrame::OnDeviceSelect(wxCommandEvent& evt)
@@ -289,6 +282,7 @@ void ChronoFrame::OnDeviceSelect(wxCommandEvent& evt)
 void ChronoFrame::OnStart(wxCommandEvent&)
 {
 	time_code_panel->Enable(false);
+	tick_panel->Enable(false);
 	int bpm = bpm_panel->GetValue();
 	if (bpm == 0)
 	{
@@ -306,6 +300,7 @@ void ChronoFrame::OnStop(wxCommandEvent&)
 {
 	m_chrono.stop();
 	time_code_panel->Enable(true);
+	tick_panel->Enable(true);
 	bpm_panel->Enable(true);
 }
 
@@ -324,6 +319,12 @@ void ChronoFrame::OnTimeCodeChanged(TimeCodeEvent& evt)
 {
 	m_time_code_ui = evt.GetTimeCode();
 	m_chrono.setTimeCode(m_time_code_ui);
+}
+
+void ChronoFrame::OnTickChanged(TickEvent& evt)
+{
+	m_tick_ui = evt.GetTick();
+	m_chrono.setTick(m_tick_ui);
 }
 
 void ChronoFrame::start(const crossmidi::MidiTimeCode& mtc)

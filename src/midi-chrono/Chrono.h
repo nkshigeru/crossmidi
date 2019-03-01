@@ -16,6 +16,8 @@ public:
 
 	void setTimeCode(const crossmidi::MidiTimeCode& time_code);
 	crossmidi::MidiTimeCode getTimeCode();
+	void setTick(uint64_t tick);
+	uint64_t getTick();
 	void setBPM(int value);
 	int getBPM() const;
 

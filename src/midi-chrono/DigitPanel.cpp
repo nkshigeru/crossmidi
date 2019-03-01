@@ -12,8 +12,9 @@ static const wxColour ForegroundColor(255, 255, 255);
 static const wxColour FocusColor(39, 179, 238);
 
 DigitPanel::DigitPanel(wxWindow* parent, wxWindowID id)
-	: wxWindow(parent, id, wxDefaultPosition, parent->FromDIP(wxSize(15, 30))), m_value(-1)
+	: wxWindow(parent, id, wxDefaultPosition, parent->FromDIP(wxSize(15, 30)), wxFULL_REPAINT_ON_RESIZE), m_value(-1)
 {
+	SetBackgroundStyle(wxBG_STYLE_PAINT);
 	wxFont display_font(FromDIP(wxSize(15, 30)), wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 	SetFont(display_font);
 }

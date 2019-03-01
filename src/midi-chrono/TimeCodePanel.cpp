@@ -76,6 +76,19 @@ TimeCodePanel::~TimeCodePanel()
 {
 }
 
+bool TimeCodePanel::Enable(bool b)
+{
+	h10->Enable(b);
+	h1->Enable(b);
+	m10->Enable(b);
+	m1->Enable(b);
+	s10->Enable(b);
+	s1->Enable(b);
+	f10->Enable(b);
+	f1->Enable(b);
+	return true;
+}
+
 void TimeCodePanel::SetValue(const crossmidi::MidiTimeCode& value)
 {
 	if (m_value.hour != value.hour)

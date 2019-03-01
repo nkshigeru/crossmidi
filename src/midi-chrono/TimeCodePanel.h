@@ -33,6 +33,8 @@ public:
 	TimeCodePanel(wxWindow *parent, wxWindowID winid = wxID_ANY);
 	virtual ~TimeCodePanel();
 
+	bool Enable(bool b) override;
+
 	void SetValue(const crossmidi::MidiTimeCode& value);
 	crossmidi::MidiTimeCode GetValue() const;
 
